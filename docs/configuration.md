@@ -6,9 +6,9 @@ Complete reference for all Pipe configuration options.
 
 Pipe can be configured three ways (in order of priority):
 
-1. **Command line flags** — Highest priority, overrides everything
-2. **Environment variables** — Good for CI/CD and secrets
-3. **Config file** (`pipe.yaml`) — Best for project defaults
+1. **Command line flags** - Highest priority, overrides everything
+2. **Environment variables** - Good for CI/CD and secrets
+3. **Config file** (`pipe.yaml`) - Best for project defaults
 
 ```bash
 # These all work together
@@ -164,11 +164,11 @@ remoteCommands:
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
-| `--config` | — | `pipe.yaml` | Config file path |
-| `--host` | `HOST` | — | **Required.** Remote host |
+| `--config` | - | `pipe.yaml` | Config file path |
+| `--host` | `HOST` | - | **Required.** Remote host |
 | `--user` | `HOST_USER` | current user | SSH username |
 | `--ssh-port` | `SSH_PORT` | `22` | SSH port |
-| `--ssh-key` | `SSH_KEY_PATH` | — | SSH private key path |
+| `--ssh-key` | `SSH_KEY_PATH` | - | SSH private key path |
 | `--dry-run` | `DRY_RUN` | `false` | Preview without changes |
 | `--verbose`, `-v` | `VERBOSE` | `false` | Detailed output |
 
@@ -180,7 +180,7 @@ remoteCommands:
 | `--dockerfile` | `DOCKERFILE` | `Dockerfile` | Dockerfile path |
 | `--tag` | `DOCKER_IMAGE_TAG` | `latest` | Image tag |
 | `--platform` | `HOST_PLATFORM` | `linux/amd64` | Target platform |
-| `--build-arg` | `DOCKER_BUILD_ARGS` | — | Build argument (repeatable) |
+| `--build-arg` | `DOCKER_BUILD_ARGS` | - | Build argument (repeatable) |
 
 ### Container Options
 
@@ -190,59 +190,59 @@ remoteCommands:
 | `--container-port` | `DOCKER_CONTAINER_PORT` | `3000` | Container port |
 | `--host-port` | `HOST_PORT` | `3000` | Host port |
 | `--restart` | `RESTART_POLICY` | `unless-stopped` | Restart policy |
-| `--network` | `DOCKER_NETWORK` | — | Docker network |
-| `--env-file` | `DOCKER_CONTAINER_ENV_FILE` | — | Environment file |
-| `--env` | — | — | Environment variable (repeatable) |
-| `--volume` | `DOCKER_VOLUMES` | — | Volume mount (repeatable) |
+| `--network` | `DOCKER_NETWORK` | - | Docker network |
+| `--env-file` | `DOCKER_CONTAINER_ENV_FILE` | - | Environment file |
+| `--env` | - | - | Environment variable (repeatable) |
+| `--volume` | `DOCKER_VOLUMES` | - | Volume mount (repeatable) |
 
 ### Resource Limits
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
-| `--cpus` | `DOCKER_CPUS` | — | CPU limit (e.g., `0.5`, `2`) |
-| `--memory` | `DOCKER_MEMORY` | — | Memory limit (e.g., `512m`, `2g`) |
+| `--cpus` | `DOCKER_CPUS` | - | CPU limit (e.g., `0.5`, `2`) |
+| `--memory` | `DOCKER_MEMORY` | - | Memory limit (e.g., `512m`, `2g`) |
 
 ### Health Check
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
-| `--health-cmd` | `HEALTH_CMD` | — | Health check command |
-| `--health-interval` | `HEALTH_INTERVAL` | — | Check interval (e.g., `30s`) |
-| `--health-timeout` | `HEALTH_TIMEOUT` | — | Check timeout (e.g., `10s`) |
-| `--health-retries` | `HEALTH_RETRIES` | — | Failure threshold |
-| `--health-start-period` | `HEALTH_START_PERIOD` | — | Startup grace period |
+| `--health-cmd` | `HEALTH_CMD` | - | Health check command |
+| `--health-interval` | `HEALTH_INTERVAL` | - | Check interval (e.g., `30s`) |
+| `--health-timeout` | `HEALTH_TIMEOUT` | - | Check timeout (e.g., `10s`) |
+| `--health-retries` | `HEALTH_RETRIES` | - | Failure threshold |
+| `--health-start-period` | `HEALTH_START_PERIOD` | - | Startup grace period |
 
 ### Security
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
-| `--container-user` | `CONTAINER_USER` | — | User to run as |
+| `--container-user` | `CONTAINER_USER` | - | User to run as |
 | `--privileged` | `PRIVILEGED` | `false` | Privileged mode |
 | `--read-only` | `READ_ONLY` | `false` | Read-only root fs |
 | `--init` | `INIT` | `false` | Use init process |
-| `--cap-add` | — | — | Add capability (repeatable) |
-| `--cap-drop` | — | — | Drop capability (repeatable) |
+| `--cap-add` | - | - | Add capability (repeatable) |
+| `--cap-drop` | - | - | Drop capability (repeatable) |
 
 ### Advanced
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
-| `--hostname` | `CONTAINER_HOSTNAME` | — | Container hostname |
-| `--workdir` | `WORKDIR` | — | Working directory |
-| `--entrypoint` | — | — | Override entrypoint |
-| `--command` | — | — | Override command |
-| `--add-host` | — | — | Host mapping (repeatable) |
-| `--label` | — | — | Label (repeatable) |
-| `--tmpfs` | — | — | tmpfs mount (repeatable) |
-| `--log-driver` | `LOG_DRIVER` | — | Logging driver |
-| `--log-opt` | — | — | Log option (repeatable) |
+| `--hostname` | `CONTAINER_HOSTNAME` | - | Container hostname |
+| `--workdir` | `WORKDIR` | - | Working directory |
+| `--entrypoint` | - | - | Override entrypoint |
+| `--command` | - | - | Override command |
+| `--add-host` | - | - | Host mapping (repeatable) |
+| `--label` | - | - | Label (repeatable) |
+| `--tmpfs` | - | - | tmpfs mount (repeatable) |
+| `--log-driver` | `LOG_DRIVER` | - | Logging driver |
+| `--log-opt` | - | - | Log option (repeatable) |
 
 ### Execution
 
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
-| `--remote-command` | `REMOTE_COMMANDS` | — | Post-deploy command (repeatable) |
-| `--rollback` | — | `false` | Rollback to previous |
+| `--remote-command` | `REMOTE_COMMANDS` | - | Post-deploy command (repeatable) |
+| `--rollback` | - | `false` | Rollback to previous |
 
 ---
 

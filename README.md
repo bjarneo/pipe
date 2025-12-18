@@ -1,15 +1,15 @@
 # Pipe
 
-> **Deploy Docker containers anywhere via SSH — no registry required.**
+> **Deploy Docker containers anywhere via SSH - no registry required.**
 
 Pipe builds your Docker image locally, transfers only the changed layers to your server, and starts your container. It's like `git push` for containers.
 
 ## Why Pipe?
 
-- **No registry needed** — Deploy directly from your machine to any server
-- **Fast transfers** — Only changed layers are sent (delta sync)
-- **Simple config** — One YAML file, sensible defaults
-- **Zero dependencies** — Single binary, works anywhere
+- **No registry needed** - Deploy directly from your machine to any server
+- **Fast transfers** - Only changed layers are sent (delta sync)
+- **Simple config** - One YAML file, sensible defaults
+- **Zero dependencies** - Single binary, works anywhere
 
 ## Quick Start
 
@@ -36,11 +36,11 @@ Local Machine                     Remote Server
 +-------------+                  +-------------+
 ```
 
-1. **Build** — Creates Docker image locally
-2. **Compare** — Checks which layers exist on remote
-3. **Transfer** — Sends only new/changed layers via SSH
-4. **Deploy** — Stops old container, starts new one
-5. **Cleanup** — Keeps last 5 releases for rollback
+1. **Build** - Creates Docker image locally
+2. **Compare** - Checks which layers exist on remote
+3. **Transfer** - Sends only new/changed layers via SSH
+4. **Deploy** - Stops old container, starts new one
+5. **Cleanup** - Keeps last 5 releases for rollback
 
 ## Config File
 
@@ -89,7 +89,7 @@ pipe --config prod.yaml      # Use different config
 
 | Feature | Description |
 |---------|-------------|
-| **Delta transfers** | Only changed layers transfer — 10x faster after first deploy |
+| **Delta transfers** | Only changed layers transfer - 10x faster after first deploy |
 | **Health checks** | Monitor container health with customizable checks |
 | **Resource limits** | Set CPU and memory constraints |
 | **Rollback** | One command to revert to previous version |
@@ -133,7 +133,7 @@ Contributions welcome! Please read our contributing guidelines.
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 

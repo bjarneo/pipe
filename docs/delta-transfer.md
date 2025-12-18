@@ -4,11 +4,11 @@ Pipe uses **delta transfers** to dramatically speed up deployments after the fir
 
 ## The Problem
 
-Docker images can be large—hundreds of megabytes or even gigabytes. Transferring the entire image on every deployment wastes time and bandwidth.
+Docker images can be large-hundreds of megabytes or even gigabytes. Transferring the entire image on every deployment wastes time and bandwidth.
 
 ## The Solution
 
-Docker images are built in layers. When you update your code, typically only the top few layers change—your base image layers (Node.js, Python, nginx, etc.) stay the same.
+Docker images are built in layers. When you update your code, typically only the top few layers change-your base image layers (Node.js, Python, nginx, etc.) stay the same.
 
 Pipe takes advantage of this:
 
