@@ -1,0 +1,32 @@
+# Pipe Configuration for Static Site Example
+# Minimal configuration for a static website
+
+# Connection
+host: example.com
+user: deploy
+
+# Image
+image: static-site
+tag: latest
+
+# Container
+containerName: static-site
+containerPort: "80"
+hostPort: "8080"
+restartPolicy: unless-stopped
+
+# Health check
+healthCmd: "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"
+healthInterval: "30s"
+healthRetries: 3
+
+# Security - run as read-only
+readOnly: true
+tmpfs:
+  - /var/cache/nginx
+  - /var/run
+
+# Labels
+labels:
+  app: static-site
+  type: frontend

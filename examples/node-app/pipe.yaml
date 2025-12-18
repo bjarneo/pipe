@@ -1,0 +1,70 @@
+# Pipe Configuration for Node.js Example
+# Copy this file and update host/user for your environment
+
+# ===================
+# Connection Settings
+# ===================
+host: example.com          # Your server hostname or IP
+user: deploy               # SSH user with Docker access
+# sshPort: "22"            # Uncomment if non-standard port
+# sshKey: ~/.ssh/id_rsa    # Uncomment to specify SSH key
+
+# ===================
+# Image Settings
+# ===================
+image: node-app
+tag: latest                # Or use: ${GIT_TAG}, v1.0.0, etc.
+dockerfile: Dockerfile
+platform: linux/amd64
+
+# ===================
+# Container Settings
+# ===================
+containerName: node-app
+containerPort: "3000"
+hostPort: "3000"
+restartPolicy: unless-stopped
+
+# ===================
+# Health Check
+# ===================
+healthCmd: "wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1"
+healthInterval: "30s"
+healthTimeout: "10s"
+healthRetries: 3
+healthStartPeriod: "10s"
+
+# ===================
+# Environment
+# ===================
+env:
+  NODE_ENV: production
+  VERSION: ${VERSION:-1.0.0}
+
+# ===================
+# Build Arguments
+# ===================
+buildArgs:
+  VERSION: ${VERSION:-1.0.0}
+  BUILD_DATE: ${BUILD_DATE}
+  GIT_HASH: ${GIT_HASH}
+
+# ===================
+# Labels
+# ===================
+labels:
+  app: node-app
+  environment: production
+  managed-by: pipe
+
+# ===================
+# Resource Limits
+# ===================
+cpus: "0.5"
+memory: "256m"
+
+# ===================
+# Post-Deployment
+# ===================
+remoteCommands:
+  - "docker system prune -f --filter 'until=24h'"

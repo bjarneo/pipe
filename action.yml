@@ -1,8 +1,9 @@
 name: Deploy with pipe
 
-description: 'Deploy applications using pipe'
+description: 'Deploy Docker containers to remote hosts via SSH - no registry required'
 
 inputs:
+  # Core settings
   host:
     description: 'Remote host to deploy to'
     required: true
@@ -10,11 +11,21 @@ inputs:
     description: 'SSH user for remote host'
     required: false
     default: 'root'
+  ssh_key:
+    description: 'SSH private key content'
+    required: true
+    sensitive: true
+  ssh_port:
+    description: 'SSH port'
+    required: false
+    default: '22'
+
+  # Image settings
   image:
     description: 'Docker image name'
     required: true
   dockerfile:
-    description: 'Path to the dockerfile'
+    description: 'Path to the Dockerfile'
     required: false
     default: 'Dockerfile'
   tag:
@@ -25,10 +36,11 @@ inputs:
     description: 'Docker platform'
     required: false
     default: 'linux/amd64'
-  ssh_key:
-    description: 'SSH private key content'
-    required: true
-    sensitive: true
+  build_args:
+    description: 'Build arguments (comma-separated KEY=VALUE pairs)'
+    required: false
+
+  # Container settings
   container_name:
     description: 'Name for the container'
     required: true
@@ -39,26 +51,100 @@ inputs:
     description: 'Host port'
     required: true
   env_file:
-    description: 'Environment file'
+    description: 'Environment file path'
     required: false
-  build_args:
-    description: 'Build arguments (comma-separated KEY=VALUE pairs)'
-    required: false
-  rollback:
-    description: 'Rollback to the previous version'
+  env_vars:
+    description: 'Environment variables (comma-separated KEY=VALUE pairs)'
     required: false
   network:
     description: 'Docker network to connect to'
     required: false
+  volumes:
+    description: 'Volume mounts (comma-separated host:container pairs)'
+    required: false
+  restart_policy:
+    description: 'Restart policy (no, always, on-failure, unless-stopped)'
+    required: false
+    default: 'unless-stopped'
+
+  # Resource limits
   cpus:
     description: 'Number of CPUs (e.g., "0.5" or "2")'
     required: false
   memory:
     description: 'Memory limit (e.g., "512m" or "2g")'
     required: false
-  volumes:
-    description: 'Volume mounts (comma-separated host:container pairs)'
+
+  # Health check
+  health_cmd:
+    description: 'Health check command'
     required: false
+  health_interval:
+    description: 'Health check interval (e.g., "30s")'
+    required: false
+  health_timeout:
+    description: 'Health check timeout (e.g., "10s")'
+    required: false
+  health_retries:
+    description: 'Health check retries'
+    required: false
+
+  # Advanced container options
+  labels:
+    description: 'Container labels (comma-separated KEY=VALUE pairs)'
+    required: false
+  entrypoint:
+    description: 'Override container entrypoint'
+    required: false
+  command:
+    description: 'Override container command'
+    required: false
+  container_user:
+    description: 'User to run container as'
+    required: false
+  workdir:
+    description: 'Working directory inside container'
+    required: false
+  hostname:
+    description: 'Container hostname'
+    required: false
+
+  # Security
+  privileged:
+    description: 'Run container in privileged mode'
+    required: false
+    default: 'false'
+  read_only:
+    description: 'Mount root filesystem as read-only'
+    required: false
+    default: 'false'
+  init:
+    description: 'Run init inside container'
+    required: false
+    default: 'false'
+
+  # Logging
+  log_driver:
+    description: 'Logging driver'
+    required: false
+  log_opts:
+    description: 'Log driver options (comma-separated KEY=VALUE pairs)'
+    required: false
+
+  # Remote commands
+  remote_commands:
+    description: 'Commands to run after deployment (comma-separated)'
+    required: false
+
+  # Execution options
+  rollback:
+    description: 'Rollback to the previous version'
+    required: false
+    default: 'false'
+  verbose:
+    description: 'Show detailed output'
+    required: false
+    default: 'false'
 
 runs:
   using: "composite"
@@ -69,45 +155,76 @@ runs:
         mkdir -p ~/.ssh
         echo "${{ inputs.ssh_key }}" > ~/.ssh/deploy_key
         chmod 600 ~/.ssh/deploy_key
-        ssh-keyscan -H ${{ inputs.host }} >> ~/.ssh/known_hosts
+        ssh-keyscan -p ${{ inputs.ssh_port }} -H ${{ inputs.host }} >> ~/.ssh/known_hosts 2>/dev/null
 
     - name: Download pipe
       shell: bash
       run: |
-        curl -L -o pipe "https://github.com/bjarneo/pipe/releases/latest/download/pipe-linux-amd64"
+        curl -sL -o pipe "https://github.com/bjarneo/pipe/releases/latest/download/pipe-linux-amd64"
         chmod +x pipe
 
-    - name: Prepare build args
-      id: build_args
+    - name: Prepare flags
+      id: flags
       shell: bash
       run: |
-        BUILD_ARGS=""
+        FLAGS=""
+        
+        # Build args
         if [ -n "${{ inputs.build_args }}" ]; then
           IFS=',' read -ra ARGS <<< "${{ inputs.build_args }}"
           for arg in "${ARGS[@]}"; do
-            BUILD_ARGS="$BUILD_ARGS --build-arg $arg"
+            FLAGS="$FLAGS --build-arg $arg"
           done
         fi
-        echo "args=$BUILD_ARGS" >> $GITHUB_OUTPUT
-
-    - name: Prepare volume flags
-      id: volume_flags
-      shell: bash
-      run: |
-        VOLUME_FLAGS=""
+        
+        # Volumes
         if [ -n "${{ inputs.volumes }}" ]; then
           IFS=',' read -ra VOLS <<< "${{ inputs.volumes }}"
           for vol in "${VOLS[@]}"; do
-            VOLUME_FLAGS="$VOLUME_FLAGS --volume $vol"
+            FLAGS="$FLAGS --volume $vol"
           done
         fi
-        echo "flags=$VOLUME_FLAGS" >> $GITHUB_OUTPUT
+        
+        # Environment variables
+        if [ -n "${{ inputs.env_vars }}" ]; then
+          IFS=',' read -ra ENVS <<< "${{ inputs.env_vars }}"
+          for env in "${ENVS[@]}"; do
+            FLAGS="$FLAGS --env $env"
+          done
+        fi
+        
+        # Labels
+        if [ -n "${{ inputs.labels }}" ]; then
+          IFS=',' read -ra LBLS <<< "${{ inputs.labels }}"
+          for lbl in "${LBLS[@]}"; do
+            FLAGS="$FLAGS --label $lbl"
+          done
+        fi
+        
+        # Log opts
+        if [ -n "${{ inputs.log_opts }}" ]; then
+          IFS=',' read -ra OPTS <<< "${{ inputs.log_opts }}"
+          for opt in "${OPTS[@]}"; do
+            FLAGS="$FLAGS --log-opt $opt"
+          done
+        fi
+        
+        # Remote commands
+        if [ -n "${{ inputs.remote_commands }}" ]; then
+          IFS=',' read -ra CMDS <<< "${{ inputs.remote_commands }}"
+          for cmd in "${CMDS[@]}"; do
+            FLAGS="$FLAGS --remote-command \"$cmd\""
+          done
+        fi
+        
+        echo "flags=$FLAGS" >> $GITHUB_OUTPUT
 
     - name: Deploy with pipe
       shell: bash
       env:
         HOST: ${{ inputs.host }}
         HOST_USER: ${{ inputs.user }}
+        SSH_PORT: ${{ inputs.ssh_port }}
         HOST_PLATFORM: ${{ inputs.platform }}
         HOST_PORT: ${{ inputs.host_port }}
         DOCKER_IMAGE_NAME: ${{ inputs.image }}
@@ -118,12 +235,34 @@ runs:
         DOCKER_NETWORK: ${{ inputs.network }}
         DOCKER_CPUS: ${{ inputs.cpus }}
         DOCKER_MEMORY: ${{ inputs.memory }}
+        RESTART_POLICY: ${{ inputs.restart_policy }}
+        HEALTH_CMD: ${{ inputs.health_cmd }}
+        HEALTH_INTERVAL: ${{ inputs.health_interval }}
+        HEALTH_TIMEOUT: ${{ inputs.health_timeout }}
+        HEALTH_RETRIES: ${{ inputs.health_retries }}
+        CONTAINER_USER: ${{ inputs.container_user }}
+        WORKDIR: ${{ inputs.workdir }}
+        CONTAINER_HOSTNAME: ${{ inputs.hostname }}
+        LOG_DRIVER: ${{ inputs.log_driver }}
+        PRIVILEGED: ${{ inputs.privileged }}
+        READ_ONLY: ${{ inputs.read_only }}
+        INIT: ${{ inputs.init }}
         SSH_KEY_PATH: ~/.ssh/deploy_key
       run: |
+        VERBOSE_FLAG=""
+        if [ "${{ inputs.verbose }}" = "true" ]; then
+          VERBOSE_FLAG="--verbose"
+        fi
+        
         if [ "${{ inputs.rollback }}" = "true" ]; then
-          ./pipe --rollback
+          ./pipe --rollback $VERBOSE_FLAG
         else
-          ./pipe ${{ steps.build_args.outputs.args }} ${{ steps.volume_flags.outputs.flags }}
+          ./pipe \
+            --dockerfile "${{ inputs.dockerfile }}" \
+            ${{ steps.flags.outputs.flags }} \
+            $VERBOSE_FLAG \
+            $( [ -n "${{ inputs.entrypoint }}" ] && echo "--entrypoint ${{ inputs.entrypoint }}" ) \
+            $( [ -n "${{ inputs.command }}" ] && echo "--command ${{ inputs.command }}" )
         fi
 
     - name: Upload deployment logs

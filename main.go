@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 
 	"github.com/bjarneo/pipe/internal/config"
@@ -9,10 +10,10 @@ import (
 )
 
 func main() {
-	log := initLogger()
-	defer log.Close()
-
 	cfg := config.Load()
+
+	log := initLogger(cfg.Verbose)
+	defer log.Close()
 
 	if cfg.Rollback {
 		if err := deploy.Rollback(&cfg, log); err != nil {
@@ -27,10 +28,11 @@ func main() {
 	}
 }
 
-func initLogger() *logger.Logger {
-	log, err := logger.New("deploy.log")
+func initLogger(verbose bool) *logger.Logger {
+	log, err := logger.New("deploy.log", verbose)
 	if err != nil {
-		log.Fatal(err)
+		fmt.Fprintf(os.Stderr, "FATAL: Failed to initialize logger: %v\n", err)
+		os.Exit(1)
 	}
 	return log
 }
