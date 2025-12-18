@@ -4,8 +4,6 @@
 
 Pipe builds your Docker image locally, transfers only the changed layers to your server, and starts your container. It's like `git push` for containers.
 
-https://github.com/user-attachments/assets/68111156-4445-43c1-9d63-071b2680abc3
-
 ## Why Pipe?
 
 - **No registry needed** — Deploy directly from your machine to any server
