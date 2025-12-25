@@ -13,6 +13,11 @@ import (
 
 // Deploy performs the main deployment process
 func Deploy(cfg *config.Config, log *logger.Logger) error {
+	// Enable quiet mode for JSON output
+	if cfg.JSONOutput {
+		log.SetQuiet(true)
+	}
+
 	// Initialize stats tracking
 	st := stats.New()
 	st.SetImageInfo(cfg.Image, cfg.Tag)
@@ -80,9 +85,17 @@ func Deploy(cfg *config.Config, log *logger.Logger) error {
 	}
 
 	// Print deployment summary
-	st.PrintSummary()
+	if cfg.JSONOutput {
+		jsonOutput, err := st.ToJSON()
+		if err != nil {
+			return fmt.Errorf("failed to generate JSON output: %w", err)
+		}
+		fmt.Println(jsonOutput)
+	} else {
+		st.PrintSummary()
+		fmt.Println("Deployment completed successfully!")
+	}
 
-	fmt.Println("Deployment completed successfully!")
 	return nil
 }
 

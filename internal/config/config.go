@@ -61,8 +61,9 @@ type Config struct {
 	LogOpts       map[string]string `json:"logOpts" yaml:"logOpts"`
 
 	// Execution options
-	DryRun  bool `json:"dryRun" yaml:"dryRun"`
-	Verbose bool `json:"verbose" yaml:"verbose"`
+	DryRun     bool `json:"dryRun" yaml:"dryRun"`
+	Verbose    bool `json:"verbose" yaml:"verbose"`
+	JSONOutput bool `json:"jsonOutput" yaml:"jsonOutput"`
 }
 
 // arrayFlags allows for multiple flag values
@@ -151,6 +152,7 @@ func Load() Config {
 	flag.BoolVar(&config.DryRun, "dry-run", false, "Preview deployment without executing")
 	flag.BoolVar(&config.Verbose, "verbose", false, "Show detailed output")
 	flag.BoolVar(&config.Verbose, "v", false, "Show detailed output (shorthand)")
+	flag.BoolVar(&config.JSONOutput, "json", false, "Output deployment stats as JSON")
 	flag.BoolVar(&showHelp, "help", false, "Show help message")
 	flag.BoolVar(&config.Rollback, "rollback", false, "Rollback to previous version")
 	flag.BoolVar(&showVersion, "version", false, "Show version information")
@@ -598,6 +600,7 @@ func mergeConfig(fileConfig, cliConfig Config, buildArgs, volumeFlags, remoteCom
 	result.ReadOnly = getBool(cliConfig.ReadOnly, "READ_ONLY", fileConfig.ReadOnly)
 	result.DryRun = getBool(cliConfig.DryRun, "DRY_RUN", fileConfig.DryRun)
 	result.Verbose = getBool(cliConfig.Verbose, "VERBOSE", fileConfig.Verbose)
+	result.JSONOutput = getBool(cliConfig.JSONOutput, "JSON_OUTPUT", fileConfig.JSONOutput)
 	result.Rollback = cliConfig.Rollback
 
 	// Merge build args: file < env < CLI
@@ -757,6 +760,7 @@ Remote Execution:
 
 Other:
   --verbose, -v       Show detailed output
+  --json              Output deployment stats as JSON (for piping to other tools)
   --rollback          Rollback to the previous version
   --version           Show version information
   --help              Show this help message
@@ -833,6 +837,7 @@ Environment Variables:
   INIT                        Use init (true/false)
   REMOTE_COMMANDS             Remote commands (comma-separated)
   DRY_RUN                     Dry run mode (true/false)
+  JSON_OUTPUT                 Output JSON stats (true/false)
 
 Examples:
   # Deploy using config file
@@ -861,4 +866,7 @@ Examples:
 
   # Rollback to previous version
   pipe --rollback
+
+  # Output stats as JSON (for piping to other tools)
+  pipe --json | jq '.duration'
 ` 

@@ -1,6 +1,7 @@
 package stats
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -95,6 +96,71 @@ func FormatDuration(d time.Duration) string {
 	minutes := int(d.Minutes())
 	seconds := int(d.Seconds()) % 60
 	return fmt.Sprintf("%dm %ds", minutes, seconds)
+}
+
+// JSONOutput represents the JSON output structure for stats
+type JSONOutput struct {
+	Image struct {
+		Name string `json:"name"`
+		Tag  string `json:"tag"`
+	} `json:"image"`
+	Container struct {
+		Name string `json:"name"`
+		Host string `json:"host"`
+	} `json:"container"`
+	Transfer struct {
+		TotalLayers      int    `json:"totalLayers"`
+		CachedLayers     int    `json:"cachedLayers"`
+		NewLayers        int    `json:"newLayers"`
+		CachePercent     float64 `json:"cachePercent"`
+		ImageSizeBytes   int64  `json:"imageSizeBytes"`
+		ImageSize        string `json:"imageSize"`
+		TransferredBytes int64  `json:"transferredBytes"`
+		Transferred      string `json:"transferred"`
+		BandwidthSaved   float64 `json:"bandwidthSavedPercent"`
+	} `json:"transfer"`
+	Timing struct {
+		StartTime   string  `json:"startTime"`
+		EndTime     string  `json:"endTime"`
+		DurationMs  int64   `json:"durationMs"`
+		Duration    string  `json:"duration"`
+	} `json:"timing"`
+	Success bool `json:"success"`
+}
+
+// ToJSON returns the stats as a JSON string
+func (s *Stats) ToJSON() (string, error) {
+	s.Finish()
+
+	output := JSONOutput{}
+	output.Image.Name = s.ImageName
+	output.Image.Tag = s.ImageTag
+	output.Container.Name = s.ContainerName
+	output.Container.Host = s.Host
+	output.Transfer.TotalLayers = s.TotalLayers
+	output.Transfer.CachedLayers = s.CachedLayers
+	output.Transfer.NewLayers = s.NewLayers
+	if s.TotalLayers > 0 {
+		output.Transfer.CachePercent = float64(s.CachedLayers) / float64(s.TotalLayers) * 100
+	}
+	output.Transfer.ImageSizeBytes = s.ImageSize
+	output.Transfer.ImageSize = FormatBytes(s.ImageSize)
+	output.Transfer.TransferredBytes = s.TransferredBytes
+	output.Transfer.Transferred = FormatBytes(s.TransferredBytes)
+	if s.ImageSize > 0 && s.TransferredBytes > 0 {
+		output.Transfer.BandwidthSaved = float64(s.ImageSize-s.TransferredBytes) / float64(s.ImageSize) * 100
+	}
+	output.Timing.StartTime = s.StartTime.Format(time.RFC3339)
+	output.Timing.EndTime = s.EndTime.Format(time.RFC3339)
+	output.Timing.DurationMs = s.Duration().Milliseconds()
+	output.Timing.Duration = FormatDuration(s.Duration())
+	output.Success = true
+
+	jsonBytes, err := json.Marshal(output)
+	if err != nil {
+		return "", err
+	}
+	return string(jsonBytes), nil
 }
 
 // PrintSummary prints a pretty deployment summary

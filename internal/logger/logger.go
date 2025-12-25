@@ -21,6 +21,7 @@ type Logger struct {
 	writer  io.Writer
 	file    *os.File // Keep reference for Close()
 	verbose bool
+	quiet   bool // suppress console output (for JSON mode)
 }
 
 // Ensure Logger implements Interface
@@ -42,14 +43,23 @@ func NewWithWriter(w io.Writer, verbose bool) *Logger {
 	return &Logger{writer: w, file: nil, verbose: verbose}
 }
 
-// Step logs a deployment step (always shown)
+// SetQuiet enables or disables quiet mode (suppresses console output)
+func (l *Logger) SetQuiet(quiet bool) {
+	if l != nil {
+		l.quiet = quiet
+	}
+}
+
+// Step logs a deployment step (always shown unless quiet)
 func (l *Logger) Step(message string) error {
 	if l == nil || l.writer == nil {
 		return nil
 	}
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	logMessage := fmt.Sprintf("[%s] STEP: %s\n", timestamp, message)
-	fmt.Printf("> %s\n", message)
+	if !l.quiet {
+		fmt.Printf("> %s\n", message)
+	}
 	_, err := l.writer.Write([]byte(logMessage))
 	return err
 }
@@ -61,7 +71,7 @@ func (l *Logger) Info(message string) error {
 	}
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	logMessage := fmt.Sprintf("[%s] INFO: %s\n", timestamp, message)
-	if l.verbose {
+	if l.verbose && !l.quiet {
 		fmt.Println(message)
 	}
 	_, err := l.writer.Write([]byte(logMessage))
@@ -75,7 +85,7 @@ func (l *Logger) Debug(message string) error {
 	}
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	logMessage := fmt.Sprintf("[%s] DEBUG: %s\n", timestamp, message)
-	if l.verbose {
+	if l.verbose && !l.quiet {
 		fmt.Printf("  %s\n", message)
 	}
 	_, err := l.writer.Write([]byte(logMessage))
