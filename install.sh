@@ -40,16 +40,21 @@ main() {
     # Check if pipe already exists
     if command -v pipe >/dev/null 2>&1; then
         echo "pipe is already installed at $(which pipe)"
-        read -p "Do you want to override the existing installation? (y/N) " response
-        case "$response" in
-            [yY][eE][sS]|[yY]) 
-                echo "Proceeding with installation..."
-                ;;
-            *)
-                echo "Installation cancelled"
-                exit 0
-                ;;
-        esac
+        # Only prompt if running interactively (not piped)
+        if [ -t 0 ]; then
+            read -p "Do you want to override the existing installation? (y/N) " response
+            case "$response" in
+                [yY][eE][sS]|[yY])
+                    echo "Proceeding with installation..."
+                    ;;
+                *)
+                    echo "Installation cancelled"
+                    exit 0
+                    ;;
+            esac
+        else
+            echo "Upgrading..."
+        fi
     fi
     
     local binary_name="pipe-${system}"

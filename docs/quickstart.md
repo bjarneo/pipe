@@ -53,6 +53,13 @@ EXPOSE 80
 pipe --host your-server.com --user deploy --container-port 80 --host-port 8080
 ```
 
+```
+[1/4] Building image... done
+[2/4] Analyzing layers... 3 changed, 12 cached
+[3/4] Transferring delta... 47MB (saved 312MB)
+[4/4] Starting container... running
+```
+
 **That's it!** Visit `http://your-server.com:8080` to see your app.
 
 ## Step 4: Create a Config File (Optional)

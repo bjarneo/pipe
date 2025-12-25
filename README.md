@@ -20,14 +20,18 @@ Pipe builds your Docker image locally, transfers only the changed layers to your
 ## Quick Start
 
 ```bash
-# Install
 curl -fsSL https://raw.githubusercontent.com/bjarneo/pipe/main/install.sh | sh
+```
 
-# Deploy (with a Dockerfile in current directory)
+```bash
 pipe --host server.com --user deploy
+```
 
-# Or use a config file
-pipe
+```
+[1/4] Building image... done
+[2/4] Analyzing layers... 3 changed, 12 cached
+[3/4] Transferring delta... 47MB (saved 312MB)
+[4/4] Starting container... running
 ```
 
 **[Full Quick Start Guide](docs/quickstart.md)**
