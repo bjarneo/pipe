@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI/CD Integration - Pipe</title>
+  <meta name="description" content="GitHub Actions and CI/CD integration examples for Pipe">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+  <style>
+    .ci-page { padding: 5rem 0 3rem; }
+    .ci-header { margin-bottom: 2rem; }
+    .ci-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .ci-header p { color: var(--text-secondary); font-size: 0.9rem; }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .back-link:hover { color: var(--accent); }
+    .ci-nav {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ci-nav a {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+    .ci-nav a:hover { border-color: var(--accent); color: var(--accent); }
+    .ci-section { margin-bottom: 3rem; }
+    .ci-section h2 {
+      font-size: 1.1rem;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ci-section h3 {
+      font-size: 0.95rem;
+      margin: 1.5rem 0 0.75rem;
+      color: var(--text-primary);
+    }
+    .ci-section p {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      line-height: 1.6;
+    }
+    .ci-section ul {
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      padding-left: 1.25rem;
+    }
+    .ci-section li { margin-bottom: 0.35rem; }
+    .ci-section code {
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: var(--bg-tertiary);
+      padding: 0.1rem 0.3rem;
+      color: var(--accent);
+    }
+    .workflow-block {
+      margin: 1rem 0;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+    }
+    .workflow-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.5rem 0.75rem;
+      background: rgba(0,0,0,0.2);
+      border-bottom: 1px solid var(--border);
+      font-family: var(--font-mono);
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+    .workflow-block pre {
+      padding: 0.875rem;
+      overflow-x: auto;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.5;
+    }
+    .workflow-block .key { color: var(--accent); }
+    .workflow-block .str { color: #c3e88d; }
+    .workflow-block .comment { color: var(--text-muted); }
+    .workflow-block .bool { color: #f78c6c; }
+    .workflow-block .num { color: #f78c6c; }
+    .tip {
+      padding: 0.75rem 1rem;
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin: 1rem 0;
+    }
+    .tip strong { color: var(--accent); }
+    .warning {
+      padding: 0.75rem 1rem;
+      background: rgba(251, 191, 36, 0.1);
+      border-left: 3px solid #fbbf24;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin: 1rem 0;
+    }
+    .warning strong { color: #fbbf24; }
+    .secrets-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.8rem;
+      margin: 1rem 0;
+    }
+    .secrets-table th {
+      text-align: left;
+      padding: 0.5rem;
+      background: var(--bg-tertiary);
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .secrets-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .secrets-table code {
+      background: var(--bg-tertiary);
+      padding: 0.1rem 0.3rem;
+    }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">
+        <img src="images/logo-64.png" alt="Pipe" class="logo-img">
+        <span class="logo-text">pipe</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#quickstart">Quick Start</a>
+        <a href="index.html#installation">Install</a>
+        <a href="config.html">Reference</a>
+        <a href="ci.html">CI/CD</a>
+        <a href="index.html#examples">Examples</a>
+        <a href="https://github.com/bjarneo/pipe" class="nav-github" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="ci-page">
+    <div class="container">
+      <div class="ci-header">
+        <h1>CI/CD Integration</h1>
+        <p>Deploy with GitHub Actions, GitLab CI, and other CI/CD platforms</p>
+      </div>
+
+      <nav class="ci-nav">
+        <a href="#github-actions">GitHub Actions</a>
+        <a href="#basic">Basic Workflow</a>
+        <a href="#matrix">Matrix Deploy</a>
+        <a href="#environments">Environments</a>
+        <a href="#secrets">Secrets</a>
+        <a href="#gitlab">GitLab CI</a>
+        <a href="#json-output">JSON Output</a>
+      </nav>
+
+      <!-- GitHub Actions -->
+      <section id="github-actions" class="ci-section">
+        <h2>GitHub Actions</h2>
+        <p>Pipe works seamlessly with GitHub Actions. Install Pipe in your workflow, configure SSH access, and deploy.</p>
+
+        <h3>Prerequisites</h3>
+        <ul>
+          <li>SSH key with access to your deployment server(s)</li>
+          <li>Docker installed on the remote host</li>
+          <li>GitHub repository secrets configured</li>
+        </ul>
+      </section>
+
+      <!-- Basic Workflow -->
+      <section id="basic" class="ci-section">
+        <h2>Basic Workflow</h2>
+        <p>A simple workflow that deploys on push to the main branch.</p>
+
+        <div class="workflow-block">
+          <div class="workflow-header">
+            <span>.github/workflows/deploy.yml</span>
+            <button class="copy-btn" data-copy="name: Deploy
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install Pipe
+        run: go install github.com/bjarneo/pipe@latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo &quot;${{ secrets.SSH_PRIVATE_KEY }}&quot; > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy
+        run: |
+          pipe \
+            --host ${{ secrets.DEPLOY_HOST }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.sha }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+          </div>
+          <pre><code><span class="key">name:</span> <span class="str">Deploy</span>
+
+<span class="key">on:</span>
+  <span class="key">push:</span>
+    <span class="key">branches:</span> <span class="str">[main]</span>
+
+<span class="key">jobs:</span>
+  <span class="key">deploy:</span>
+    <span class="key">runs-on:</span> <span class="str">ubuntu-latest</span>
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="str">actions/checkout@v4</span>
+
+      - <span class="key">name:</span> <span class="str">Set up Go</span>
+        <span class="key">uses:</span> <span class="str">actions/setup-go@v5</span>
+        <span class="key">with:</span>
+          <span class="key">go-version:</span> <span class="str">'1.21'</span>
+
+      - <span class="key">name:</span> <span class="str">Install Pipe</span>
+        <span class="key">run:</span> <span class="str">go install github.com/bjarneo/pipe@latest</span>
+
+      - <span class="key">name:</span> <span class="str">Set up SSH</span>
+        <span class="key">run:</span> <span class="str">|
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.DEPLOY_HOST }} >> ~/.ssh/known_hosts</span>
+
+      - <span class="key">name:</span> <span class="str">Deploy</span>
+        <span class="key">run:</span> <span class="str">|
+          pipe \
+            --host ${{ secrets.DEPLOY_HOST }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.sha }}</span></code></pre>
+        </div>
+
+        <div class="tip">
+          <strong>Tip:</strong> Use <code>${{ github.sha }}</code> as the tag for traceability, or <code>${{ github.ref_name }}</code> for branch/tag names.
+        </div>
+      </section>
+
+      <!-- Matrix Deploy -->
+      <section id="matrix" class="ci-section">
+        <h2>Matrix Deploy (Multiple Servers)</h2>
+        <p>Deploy to multiple servers in parallel using GitHub Actions matrix strategy. Perfect for deploying to a fleet of VMs or different environments.</p>
+
+        <h3>Deploy to Multiple VMs</h3>
+        <div class="workflow-block">
+          <div class="workflow-header">
+            <span>.github/workflows/deploy-matrix.yml</span>
+            <button class="copy-btn" data-copy="name: Deploy to Multiple Servers
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        server:
+          - host: server1.example.com
+            name: server-1
+          - host: server2.example.com
+            name: server-2
+          - host: server3.example.com
+            name: server-3
+      fail-fast: false
+      max-parallel: 3
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install Pipe
+        run: go install github.com/bjarneo/pipe@latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo &quot;${{ secrets.SSH_PRIVATE_KEY }}&quot; > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ matrix.server.host }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to ${{ matrix.server.name }}
+        run: |
+          pipe \
+            --host ${{ matrix.server.host }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.sha }} \
+            --container-name app-${{ matrix.server.name }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+          </div>
+          <pre><code><span class="key">name:</span> <span class="str">Deploy to Multiple Servers</span>
+
+<span class="key">on:</span>
+  <span class="key">push:</span>
+    <span class="key">branches:</span> <span class="str">[main]</span>
+  <span class="key">workflow_dispatch:</span>
+
+<span class="key">jobs:</span>
+  <span class="key">deploy:</span>
+    <span class="key">runs-on:</span> <span class="str">ubuntu-latest</span>
+    <span class="key">strategy:</span>
+      <span class="key">matrix:</span>
+        <span class="key">server:</span>
+          - <span class="key">host:</span> <span class="str">server1.example.com</span>
+            <span class="key">name:</span> <span class="str">server-1</span>
+          - <span class="key">host:</span> <span class="str">server2.example.com</span>
+            <span class="key">name:</span> <span class="str">server-2</span>
+          - <span class="key">host:</span> <span class="str">server3.example.com</span>
+            <span class="key">name:</span> <span class="str">server-3</span>
+      <span class="key">fail-fast:</span> <span class="bool">false</span>
+      <span class="key">max-parallel:</span> <span class="num">3</span>
+
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="str">actions/checkout@v4</span>
+
+      - <span class="key">name:</span> <span class="str">Set up Go</span>
+        <span class="key">uses:</span> <span class="str">actions/setup-go@v5</span>
+        <span class="key">with:</span>
+          <span class="key">go-version:</span> <span class="str">'1.21'</span>
+
+      - <span class="key">name:</span> <span class="str">Install Pipe</span>
+        <span class="key">run:</span> <span class="str">go install github.com/bjarneo/pipe@latest</span>
+
+      - <span class="key">name:</span> <span class="str">Set up SSH</span>
+        <span class="key">run:</span> <span class="str">|
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ matrix.server.host }} >> ~/.ssh/known_hosts</span>
+
+      - <span class="key">name:</span> <span class="str">Deploy to ${{ matrix.server.name }}</span>
+        <span class="key">run:</span> <span class="str">|
+          pipe \
+            --host ${{ matrix.server.host }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.sha }} \
+            --container-name app-${{ matrix.server.name }}</span></code></pre>
+        </div>
+
+        <h3>Matrix with Different Configurations</h3>
+        <p>Deploy different services or configurations to different servers:</p>
+
+        <div class="workflow-block">
+          <div class="workflow-header">
+            <span>.github/workflows/deploy-services.yml</span>
+            <button class="copy-btn" data-copy="name: Deploy Services
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - host: api.example.com
+            service: api
+            port: 3000
+            dockerfile: Dockerfile.api
+          - host: web.example.com
+            service: web
+            port: 8080
+            dockerfile: Dockerfile.web
+          - host: worker.example.com
+            service: worker
+            port: 9000
+            dockerfile: Dockerfile.worker
+      fail-fast: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install Pipe
+        run: go install github.com/bjarneo/pipe@latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo &quot;${{ secrets.SSH_PRIVATE_KEY }}&quot; > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ matrix.host }} >> ~/.ssh/known_hosts
+
+      - name: Deploy ${{ matrix.service }}
+        run: |
+          pipe \
+            --host ${{ matrix.host }} \
+            --user deploy \
+            --ssh-key ~/.ssh/id_rsa \
+            --dockerfile ${{ matrix.dockerfile }} \
+            --image ${{ matrix.service }} \
+            --container-name ${{ matrix.service }} \
+            --container-port ${{ matrix.port }} \
+            --host-port ${{ matrix.port }} \
+            --tag ${{ github.sha }}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+          </div>
+          <pre><code><span class="key">name:</span> <span class="str">Deploy Services</span>
+
+<span class="key">on:</span>
+  <span class="key">push:</span>
+    <span class="key">branches:</span> <span class="str">[main]</span>
+
+<span class="key">jobs:</span>
+  <span class="key">deploy:</span>
+    <span class="key">runs-on:</span> <span class="str">ubuntu-latest</span>
+    <span class="key">strategy:</span>
+      <span class="key">matrix:</span>
+        <span class="key">include:</span>
+          - <span class="key">host:</span> <span class="str">api.example.com</span>
+            <span class="key">service:</span> <span class="str">api</span>
+            <span class="key">port:</span> <span class="num">3000</span>
+            <span class="key">dockerfile:</span> <span class="str">Dockerfile.api</span>
+          - <span class="key">host:</span> <span class="str">web.example.com</span>
+            <span class="key">service:</span> <span class="str">web</span>
+            <span class="key">port:</span> <span class="num">8080</span>
+            <span class="key">dockerfile:</span> <span class="str">Dockerfile.web</span>
+          - <span class="key">host:</span> <span class="str">worker.example.com</span>
+            <span class="key">service:</span> <span class="str">worker</span>
+            <span class="key">port:</span> <span class="num">9000</span>
+            <span class="key">dockerfile:</span> <span class="str">Dockerfile.worker</span>
+      <span class="key">fail-fast:</span> <span class="bool">false</span>
+
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="str">actions/checkout@v4</span>
+
+      - <span class="key">name:</span> <span class="str">Set up Go</span>
+        <span class="key">uses:</span> <span class="str">actions/setup-go@v5</span>
+        <span class="key">with:</span>
+          <span class="key">go-version:</span> <span class="str">'1.21'</span>
+
+      - <span class="key">name:</span> <span class="str">Install Pipe</span>
+        <span class="key">run:</span> <span class="str">go install github.com/bjarneo/pipe@latest</span>
+
+      - <span class="key">name:</span> <span class="str">Set up SSH</span>
+        <span class="key">run:</span> <span class="str">|
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ matrix.host }} >> ~/.ssh/known_hosts</span>
+
+      - <span class="key">name:</span> <span class="str">Deploy ${{ matrix.service }}</span>
+        <span class="key">run:</span> <span class="str">|
+          pipe \
+            --host ${{ matrix.host }} \
+            --user deploy \
+            --ssh-key ~/.ssh/id_rsa \
+            --dockerfile ${{ matrix.dockerfile }} \
+            --image ${{ matrix.service }} \
+            --container-name ${{ matrix.service }} \
+            --container-port ${{ matrix.port }} \
+            --host-port ${{ matrix.port }} \
+            --tag ${{ github.sha }}</span></code></pre>
+        </div>
+
+        <div class="tip">
+          <strong>Tip:</strong> Set <code>fail-fast: false</code> to continue deploying to other servers even if one fails.
+        </div>
+      </section>
+
+      <!-- Environments -->
+      <section id="environments" class="ci-section">
+        <h2>Environment-Based Deployment</h2>
+        <p>Use GitHub Environments for staged deployments with approvals and environment-specific secrets.</p>
+
+        <div class="workflow-block">
+          <div class="workflow-header">
+            <span>.github/workflows/deploy-environments.yml</span>
+            <button class="copy-btn" data-copy="name: Deploy with Environments
+
+on:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install Pipe
+        run: go install github.com/bjarneo/pipe@latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo &quot;${{ secrets.SSH_PRIVATE_KEY }}&quot; > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Staging
+        run: |
+          pipe \
+            --host ${{ vars.DEPLOY_HOST }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.sha }} \
+            --env NODE_ENV=staging
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    environment: production
+    needs: deploy-staging
+    if: github.event_name == 'release'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Install Pipe
+        run: go install github.com/bjarneo/pipe@latest
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo &quot;${{ secrets.SSH_PRIVATE_KEY }}&quot; > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy to Production
+        run: |
+          pipe \
+            --host ${{ vars.DEPLOY_HOST }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.event.release.tag_name }} \
+            --env NODE_ENV=production">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+          </div>
+          <pre><code><span class="key">name:</span> <span class="str">Deploy with Environments</span>
+
+<span class="key">on:</span>
+  <span class="key">push:</span>
+    <span class="key">branches:</span> <span class="str">[main]</span>
+  <span class="key">release:</span>
+    <span class="key">types:</span> <span class="str">[published]</span>
+
+<span class="key">jobs:</span>
+  <span class="key">deploy-staging:</span>
+    <span class="key">runs-on:</span> <span class="str">ubuntu-latest</span>
+    <span class="key">environment:</span> <span class="str">staging</span>
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="str">actions/checkout@v4</span>
+
+      - <span class="key">name:</span> <span class="str">Set up Go</span>
+        <span class="key">uses:</span> <span class="str">actions/setup-go@v5</span>
+        <span class="key">with:</span>
+          <span class="key">go-version:</span> <span class="str">'1.21'</span>
+
+      - <span class="key">name:</span> <span class="str">Install Pipe</span>
+        <span class="key">run:</span> <span class="str">go install github.com/bjarneo/pipe@latest</span>
+
+      - <span class="key">name:</span> <span class="str">Set up SSH</span>
+        <span class="key">run:</span> <span class="str">|
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts</span>
+
+      - <span class="key">name:</span> <span class="str">Deploy to Staging</span>
+        <span class="key">run:</span> <span class="str">|
+          pipe \
+            --host ${{ vars.DEPLOY_HOST }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.sha }} \
+            --env NODE_ENV=staging</span>
+
+  <span class="key">deploy-production:</span>
+    <span class="key">runs-on:</span> <span class="str">ubuntu-latest</span>
+    <span class="key">environment:</span> <span class="str">production</span>
+    <span class="key">needs:</span> <span class="str">deploy-staging</span>
+    <span class="key">if:</span> <span class="str">github.event_name == 'release'</span>
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="str">actions/checkout@v4</span>
+
+      - <span class="key">name:</span> <span class="str">Set up Go</span>
+        <span class="key">uses:</span> <span class="str">actions/setup-go@v5</span>
+        <span class="key">with:</span>
+          <span class="key">go-version:</span> <span class="str">'1.21'</span>
+
+      - <span class="key">name:</span> <span class="str">Install Pipe</span>
+        <span class="key">run:</span> <span class="str">go install github.com/bjarneo/pipe@latest</span>
+
+      - <span class="key">name:</span> <span class="str">Set up SSH</span>
+        <span class="key">run:</span> <span class="str">|
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ vars.DEPLOY_HOST }} >> ~/.ssh/known_hosts</span>
+
+      - <span class="key">name:</span> <span class="str">Deploy to Production</span>
+        <span class="key">run:</span> <span class="str">|
+          pipe \
+            --host ${{ vars.DEPLOY_HOST }} \
+            --user ${{ secrets.DEPLOY_USER }} \
+            --ssh-key ~/.ssh/id_rsa \
+            --tag ${{ github.event.release.tag_name }} \
+            --env NODE_ENV=production</span></code></pre>
+        </div>
+      </section>
+
+      <!-- Secrets -->
+      <section id="secrets" class="ci-section">
+        <h2>Required Secrets</h2>
+        <p>Configure these secrets in your GitHub repository settings (Settings → Secrets and variables → Actions):</p>
+
+        <table class="secrets-table">
+          <thead>
+            <tr>
+              <th>Secret</th>
+              <th>Description</th>
+              <th>Example</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>SSH_PRIVATE_KEY</code></td>
+              <td>Private SSH key for server access</td>
+              <td>Contents of <code>~/.ssh/id_rsa</code></td>
+            </tr>
+            <tr>
+              <td><code>DEPLOY_HOST</code></td>
+              <td>Target server hostname or IP</td>
+              <td><code>server.example.com</code></td>
+            </tr>
+            <tr>
+              <td><code>DEPLOY_USER</code></td>
+              <td>SSH username on the server</td>
+              <td><code>deploy</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Generating a Deploy Key</h3>
+        <div class="workflow-block">
+          <div class="workflow-header"><span>Terminal</span></div>
+          <pre><code><span class="comment"># Generate a new SSH key pair for deployments</span>
+ssh-keygen -t ed25519 -C "github-actions-deploy" -f ~/.ssh/deploy_key -N ""
+
+<span class="comment"># Copy the public key to your server</span>
+ssh-copy-id -i ~/.ssh/deploy_key.pub user@server.example.com
+
+<span class="comment"># Add the private key contents to GitHub Secrets</span>
+cat ~/.ssh/deploy_key</code></pre>
+        </div>
+
+        <div class="warning">
+          <strong>Security:</strong> Use a dedicated deploy key with minimal permissions. Never use your personal SSH key.
+        </div>
+      </section>
+
+      <!-- GitLab CI -->
+      <section id="gitlab" class="ci-section">
+        <h2>GitLab CI</h2>
+        <p>Pipe also works with GitLab CI/CD pipelines.</p>
+
+        <div class="workflow-block">
+          <div class="workflow-header">
+            <span>.gitlab-ci.yml</span>
+            <button class="copy-btn" data-copy="stages:
+  - deploy
+
+variables:
+  GO_VERSION: '1.21'
+
+deploy:
+  stage: deploy
+  image: golang:${GO_VERSION}
+  only:
+    - main
+  before_script:
+    - go install github.com/bjarneo/pipe@latest
+    - mkdir -p ~/.ssh
+    - echo &quot;$SSH_PRIVATE_KEY&quot; > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+  script:
+    - pipe
+        --host $DEPLOY_HOST
+        --user $DEPLOY_USER
+        --ssh-key ~/.ssh/id_rsa
+        --tag $CI_COMMIT_SHA
+
+deploy-matrix:
+  stage: deploy
+  image: golang:${GO_VERSION}
+  only:
+    - main
+  parallel:
+    matrix:
+      - SERVER: [server1.example.com, server2.example.com, server3.example.com]
+  before_script:
+    - go install github.com/bjarneo/pipe@latest
+    - mkdir -p ~/.ssh
+    - echo &quot;$SSH_PRIVATE_KEY&quot; > ~/.ssh/id_rsa
+    - chmod 600 ~/.ssh/id_rsa
+    - ssh-keyscan -H $SERVER >> ~/.ssh/known_hosts
+  script:
+    - pipe
+        --host $SERVER
+        --user $DEPLOY_USER
+        --ssh-key ~/.ssh/id_rsa
+        --tag $CI_COMMIT_SHA">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                <rect x="9" y="9" width="13" height="13" rx="2"/>
+                <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+              </svg>
+            </button>
+          </div>
+          <pre><code><span class="key">stages:</span>
+  - <span class="str">deploy</span>
+
+<span class="key">variables:</span>
+  <span class="key">GO_VERSION:</span> <span class="str">'1.21'</span>
+
+<span class="key">deploy:</span>
+  <span class="key">stage:</span> <span class="str">deploy</span>
+  <span class="key">image:</span> <span class="str">golang:${GO_VERSION}</span>
+  <span class="key">only:</span>
+    - <span class="str">main</span>
+  <span class="key">before_script:</span>
+    - <span class="str">go install github.com/bjarneo/pipe@latest</span>
+    - <span class="str">mkdir -p ~/.ssh</span>
+    - <span class="str">echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa</span>
+    - <span class="str">chmod 600 ~/.ssh/id_rsa</span>
+    - <span class="str">ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts</span>
+  <span class="key">script:</span>
+    - <span class="str">pipe
+        --host $DEPLOY_HOST
+        --user $DEPLOY_USER
+        --ssh-key ~/.ssh/id_rsa
+        --tag $CI_COMMIT_SHA</span>
+
+<span class="key">deploy-matrix:</span>
+  <span class="key">stage:</span> <span class="str">deploy</span>
+  <span class="key">image:</span> <span class="str">golang:${GO_VERSION}</span>
+  <span class="key">only:</span>
+    - <span class="str">main</span>
+  <span class="key">parallel:</span>
+    <span class="key">matrix:</span>
+      - <span class="key">SERVER:</span> <span class="str">[server1.example.com, server2.example.com, server3.example.com]</span>
+  <span class="key">before_script:</span>
+    - <span class="str">go install github.com/bjarneo/pipe@latest</span>
+    - <span class="str">mkdir -p ~/.ssh</span>
+    - <span class="str">echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa</span>
+    - <span class="str">chmod 600 ~/.ssh/id_rsa</span>
+    - <span class="str">ssh-keyscan -H $SERVER >> ~/.ssh/known_hosts</span>
+  <span class="key">script:</span>
+    - <span class="str">pipe
+        --host $SERVER
+        --user $DEPLOY_USER
+        --ssh-key ~/.ssh/id_rsa
+        --tag $CI_COMMIT_SHA</span></code></pre>
+        </div>
+      </section>
+
+      <!-- JSON Output -->
+      <section id="json-output" class="ci-section">
+        <h2>JSON Output for CI</h2>
+        <p>Use <code>--json</code> to get machine-readable output for CI/CD integration, notifications, or metrics.</p>
+
+        <div class="workflow-block">
+          <div class="workflow-header"><span>Example: Post deployment stats to Slack</span></div>
+          <pre><code>- <span class="key">name:</span> <span class="str">Deploy and notify</span>
+  <span class="key">run:</span> <span class="str">|
+    RESULT=$(pipe --host ${{ secrets.DEPLOY_HOST }} --user deploy --json)
+    DURATION=$(echo $RESULT | jq -r '.timing.duration')
+    TRANSFERRED=$(echo $RESULT | jq -r '.transfer.transferred')
+
+    curl -X POST ${{ secrets.SLACK_WEBHOOK }} \
+      -H "Content-Type: application/json" \
+      -d "{\"text\": \"Deployed in ${DURATION} (transferred ${TRANSFERRED})\"}"</span></code></pre>
+        </div>
+
+        <div class="workflow-block">
+          <div class="workflow-header"><span>Example: Fail on slow deployments</span></div>
+          <pre><code>- <span class="key">name:</span> <span class="str">Deploy with timeout check</span>
+  <span class="key">run:</span> <span class="str">|
+    RESULT=$(pipe --host ${{ secrets.DEPLOY_HOST }} --user deploy --json)
+    SECONDS=$(echo $RESULT | jq -r '.timing.total_seconds')
+
+    if (( $(echo "$SECONDS > 300" | bc -l) )); then
+      echo "Deployment took longer than 5 minutes!"
+      exit 1
+    fi</span></code></pre>
+        </div>
+
+        <h3>JSON Output Structure</h3>
+        <div class="workflow-block">
+          <div class="workflow-header"><span>Example output</span></div>
+          <pre><code>{
+  <span class="key">"timing"</span>: {
+    <span class="key">"duration"</span>: <span class="str">"23.4s"</span>,
+    <span class="key">"total_seconds"</span>: <span class="num">23.4</span>,
+    <span class="key">"build"</span>: <span class="str">"8.2s"</span>,
+    <span class="key">"transfer"</span>: <span class="str">"12.1s"</span>,
+    <span class="key">"deploy"</span>: <span class="str">"3.1s"</span>
+  },
+  <span class="key">"transfer"</span>: {
+    <span class="key">"transferred"</span>: <span class="str">"47MB"</span>,
+    <span class="key">"saved"</span>: <span class="str">"312MB"</span>,
+    <span class="key">"layers_changed"</span>: <span class="num">3</span>,
+    <span class="key">"layers_cached"</span>: <span class="num">12</span>
+  },
+  <span class="key">"image"</span>: {
+    <span class="key">"name"</span>: <span class="str">"my-app"</span>,
+    <span class="key">"tag"</span>: <span class="str">"abc1234"</span>
+  },
+  <span class="key">"host"</span>: <span class="str">"server.example.com"</span>,
+  <span class="key">"success"</span>: <span class="bool">true</span>
+}</code></pre>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="images/logo-64.png" alt="Pipe" class="footer-logo">
+          <span>pipe</span>
+        </div>
+        <p>Open source Docker deployment tool.</p>
+        <div class="footer-links">
+          <a href="https://github.com/bjarneo/pipe" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/bjarneo/pipe/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/bjarneo/pipe/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -35,6 +35,21 @@ See what would happen without making changes:
 pipe --dry-run
 ```
 
+### JSON Output
+
+Output deployment stats as JSON for scripting and automation:
+
+```bash
+# Output JSON stats
+pipe --json
+
+# Pipe to jq for processing
+pipe --json | jq '.timing.duration'
+
+# Or use env var
+JSON_OUTPUT=true pipe
+```
+
 ## Configuration File Examples
 
 ### Minimal Config

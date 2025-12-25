@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuration Reference - Pipe</title>
+  <meta name="description" content="Complete configuration reference for Pipe CLI">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+  <style>
+    .ref-page { padding: 5rem 0 3rem; }
+    .ref-header { margin-bottom: 2rem; }
+    .ref-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .ref-header p { color: var(--text-secondary); font-size: 0.9rem; }
+    .ref-nav {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-nav a {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+    .ref-nav a:hover { border-color: var(--accent); color: var(--accent); }
+    .ref-section { margin-bottom: 2.5rem; }
+    .ref-section h2 {
+      font-size: 1rem;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .ref-table th {
+      text-align: left;
+      padding: 0.5rem;
+      background: var(--bg-tertiary);
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .ref-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .ref-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .ref-table code {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      background: var(--bg-tertiary);
+      padding: 0.1rem 0.3rem;
+    }
+    .ref-table .env { color: var(--text-secondary); }
+    .ref-table .default { color: var(--text-muted); font-family: var(--font-mono); font-size: 0.75rem; }
+    .ref-table .desc { color: var(--text-secondary); }
+    .ref-table .req { color: #f472b6; font-size: 0.65rem; font-weight: 600; }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 1.5rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+    .back-link:hover { color: var(--accent); }
+    .yaml-example {
+      margin-top: 2rem;
+      padding: 1rem;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+    }
+    .yaml-example h3 {
+      font-size: 0.85rem;
+      margin-bottom: 0.75rem;
+      color: var(--text-muted);
+    }
+    .yaml-example pre {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.5;
+      overflow-x: auto;
+    }
+    .yaml-example .key { color: var(--accent); }
+    .yaml-example .val { color: #c3e88d; }
+    .yaml-example .comment { color: var(--text-muted); }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">
+        <img src="images/logo-64.png" alt="Pipe" class="logo-img">
+        <span class="logo-text">pipe</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#quickstart">Quick Start</a>
+        <a href="index.html#installation">Install</a>
+        <a href="config.html">Reference</a>
+        <a href="ci.html">CI/CD</a>
+        <a href="index.html#examples">Examples</a>
+        <a href="https://github.com/bjarneo/pipe" class="nav-github" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="ref-page">
+    <div class="container">
+      <div class="ref-header">
+        <h1>Configuration Reference</h1>
+        <p>All CLI flags, environment variables, and config file options</p>
+      </div>
+
+      <nav class="ref-nav">
+        <a href="#connection">Connection</a>
+        <a href="#image">Image</a>
+        <a href="#container">Container</a>
+        <a href="#resources">Resources</a>
+        <a href="#health">Health</a>
+        <a href="#security">Security</a>
+        <a href="#logging">Logging</a>
+        <a href="#advanced">Advanced</a>
+        <a href="#output">Output</a>
+      </nav>
+
+      <section id="connection" class="ref-section">
+        <h2>Connection</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--host</code></td>
+              <td class="env">HOST</td>
+              <td><code>host</code></td>
+              <td class="default">-</td>
+              <td class="desc">Remote host <span class="req">required</span></td>
+            </tr>
+            <tr>
+              <td><code>--user</code></td>
+              <td class="env">HOST_USER</td>
+              <td><code>user</code></td>
+              <td class="default">current user</td>
+              <td class="desc">SSH username</td>
+            </tr>
+            <tr>
+              <td><code>--ssh-port</code></td>
+              <td class="env">SSH_PORT</td>
+              <td><code>sshPort</code></td>
+              <td class="default">22</td>
+              <td class="desc">SSH port</td>
+            </tr>
+            <tr>
+              <td><code>--ssh-key</code></td>
+              <td class="env">SSH_KEY_PATH</td>
+              <td><code>sshKey</code></td>
+              <td class="default">-</td>
+              <td class="desc">Path to SSH private key</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="image" class="ref-section">
+        <h2>Image</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--image</code></td>
+              <td class="env">DOCKER_IMAGE_NAME</td>
+              <td><code>image</code></td>
+              <td class="default">app</td>
+              <td class="desc">Docker image name</td>
+            </tr>
+            <tr>
+              <td><code>--dockerfile</code></td>
+              <td class="env">DOCKERFILE</td>
+              <td><code>dockerfile</code></td>
+              <td class="default">Dockerfile</td>
+              <td class="desc">Dockerfile path</td>
+            </tr>
+            <tr>
+              <td><code>--tag</code></td>
+              <td class="env">DOCKER_IMAGE_TAG</td>
+              <td><code>tag</code></td>
+              <td class="default">latest</td>
+              <td class="desc">Image tag</td>
+            </tr>
+            <tr>
+              <td><code>--platform</code></td>
+              <td class="env">HOST_PLATFORM</td>
+              <td><code>platform</code></td>
+              <td class="default">linux/amd64</td>
+              <td class="desc">Target platform</td>
+            </tr>
+            <tr>
+              <td><code>--build-arg</code></td>
+              <td class="env">DOCKER_BUILD_ARGS</td>
+              <td><code>buildArgs</code></td>
+              <td class="default">-</td>
+              <td class="desc">Build argument (repeatable)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="container" class="ref-section">
+        <h2>Container</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--container-name</code></td>
+              <td class="env">DOCKER_CONTAINER_NAME</td>
+              <td><code>containerName</code></td>
+              <td class="default">app</td>
+              <td class="desc">Container name</td>
+            </tr>
+            <tr>
+              <td><code>--container-port</code></td>
+              <td class="env">DOCKER_CONTAINER_PORT</td>
+              <td><code>containerPort</code></td>
+              <td class="default">3000</td>
+              <td class="desc">Port inside container</td>
+            </tr>
+            <tr>
+              <td><code>--host-port</code></td>
+              <td class="env">HOST_PORT</td>
+              <td><code>hostPort</code></td>
+              <td class="default">3000</td>
+              <td class="desc">Port on host</td>
+            </tr>
+            <tr>
+              <td><code>--restart</code></td>
+              <td class="env">RESTART_POLICY</td>
+              <td><code>restartPolicy</code></td>
+              <td class="default">unless-stopped</td>
+              <td class="desc">Restart policy</td>
+            </tr>
+            <tr>
+              <td><code>--network</code></td>
+              <td class="env">DOCKER_NETWORK</td>
+              <td><code>network</code></td>
+              <td class="default">-</td>
+              <td class="desc">Docker network name</td>
+            </tr>
+            <tr>
+              <td><code>--hostname</code></td>
+              <td class="env">CONTAINER_HOSTNAME</td>
+              <td><code>hostname</code></td>
+              <td class="default">-</td>
+              <td class="desc">Container hostname</td>
+            </tr>
+            <tr>
+              <td><code>--env-file</code></td>
+              <td class="env">DOCKER_CONTAINER_ENV_FILE</td>
+              <td><code>envFile</code></td>
+              <td class="default">-</td>
+              <td class="desc">Environment file path</td>
+            </tr>
+            <tr>
+              <td><code>--env</code></td>
+              <td class="env">-</td>
+              <td><code>env</code></td>
+              <td class="default">-</td>
+              <td class="desc">Environment variable (repeatable)</td>
+            </tr>
+            <tr>
+              <td><code>--volume</code></td>
+              <td class="env">DOCKER_VOLUMES</td>
+              <td><code>volumes</code></td>
+              <td class="default">-</td>
+              <td class="desc">Volume mount (repeatable)</td>
+            </tr>
+            <tr>
+              <td><code>--add-host</code></td>
+              <td class="env">-</td>
+              <td><code>extraHosts</code></td>
+              <td class="default">-</td>
+              <td class="desc">Add host entry (repeatable)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="resources" class="ref-section">
+        <h2>Resources</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--cpus</code></td>
+              <td class="env">DOCKER_CPUS</td>
+              <td><code>cpus</code></td>
+              <td class="default">-</td>
+              <td class="desc">CPU limit (e.g., 0.5, 2)</td>
+            </tr>
+            <tr>
+              <td><code>--memory</code></td>
+              <td class="env">DOCKER_MEMORY</td>
+              <td><code>memory</code></td>
+              <td class="default">-</td>
+              <td class="desc">Memory limit (e.g., 512m, 2g)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="health" class="ref-section">
+        <h2>Health Check</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--health-cmd</code></td>
+              <td class="env">HEALTH_CMD</td>
+              <td><code>healthCmd</code></td>
+              <td class="default">-</td>
+              <td class="desc">Health check command</td>
+            </tr>
+            <tr>
+              <td><code>--health-interval</code></td>
+              <td class="env">HEALTH_INTERVAL</td>
+              <td><code>healthInterval</code></td>
+              <td class="default">-</td>
+              <td class="desc">Check interval (e.g., 30s)</td>
+            </tr>
+            <tr>
+              <td><code>--health-timeout</code></td>
+              <td class="env">HEALTH_TIMEOUT</td>
+              <td><code>healthTimeout</code></td>
+              <td class="default">-</td>
+              <td class="desc">Check timeout (e.g., 10s)</td>
+            </tr>
+            <tr>
+              <td><code>--health-retries</code></td>
+              <td class="env">HEALTH_RETRIES</td>
+              <td><code>healthRetries</code></td>
+              <td class="default">-</td>
+              <td class="desc">Failure threshold</td>
+            </tr>
+            <tr>
+              <td><code>--health-start-period</code></td>
+              <td class="env">HEALTH_START_PERIOD</td>
+              <td><code>healthStartPeriod</code></td>
+              <td class="default">-</td>
+              <td class="desc">Startup grace period</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="security" class="ref-section">
+        <h2>Security</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--container-user</code></td>
+              <td class="env">CONTAINER_USER</td>
+              <td><code>containerUser</code></td>
+              <td class="default">-</td>
+              <td class="desc">User to run as (e.g., 1000:1000)</td>
+            </tr>
+            <tr>
+              <td><code>--privileged</code></td>
+              <td class="env">PRIVILEGED</td>
+              <td><code>privileged</code></td>
+              <td class="default">false</td>
+              <td class="desc">Privileged mode</td>
+            </tr>
+            <tr>
+              <td><code>--read-only</code></td>
+              <td class="env">READ_ONLY</td>
+              <td><code>readOnly</code></td>
+              <td class="default">false</td>
+              <td class="desc">Read-only root filesystem</td>
+            </tr>
+            <tr>
+              <td><code>--init</code></td>
+              <td class="env">INIT</td>
+              <td><code>init</code></td>
+              <td class="default">false</td>
+              <td class="desc">Use init process</td>
+            </tr>
+            <tr>
+              <td><code>--cap-add</code></td>
+              <td class="env">-</td>
+              <td><code>capAdd</code></td>
+              <td class="default">-</td>
+              <td class="desc">Add capability (repeatable)</td>
+            </tr>
+            <tr>
+              <td><code>--cap-drop</code></td>
+              <td class="env">-</td>
+              <td><code>capDrop</code></td>
+              <td class="default">-</td>
+              <td class="desc">Drop capability (repeatable)</td>
+            </tr>
+            <tr>
+              <td><code>--tmpfs</code></td>
+              <td class="env">-</td>
+              <td><code>tmpfs</code></td>
+              <td class="default">-</td>
+              <td class="desc">tmpfs mount (repeatable)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="logging" class="ref-section">
+        <h2>Logging</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--log-driver</code></td>
+              <td class="env">LOG_DRIVER</td>
+              <td><code>logDriver</code></td>
+              <td class="default">-</td>
+              <td class="desc">Logging driver (json-file, syslog, etc.)</td>
+            </tr>
+            <tr>
+              <td><code>--log-opt</code></td>
+              <td class="env">-</td>
+              <td><code>logOpts</code></td>
+              <td class="default">-</td>
+              <td class="desc">Log option (repeatable)</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="advanced" class="ref-section">
+        <h2>Advanced</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--entrypoint</code></td>
+              <td class="env">-</td>
+              <td><code>entrypoint</code></td>
+              <td class="default">-</td>
+              <td class="desc">Override entrypoint</td>
+            </tr>
+            <tr>
+              <td><code>--command</code></td>
+              <td class="env">-</td>
+              <td><code>command</code></td>
+              <td class="default">-</td>
+              <td class="desc">Override CMD</td>
+            </tr>
+            <tr>
+              <td><code>--workdir</code></td>
+              <td class="env">WORKDIR</td>
+              <td><code>workdir</code></td>
+              <td class="default">-</td>
+              <td class="desc">Working directory</td>
+            </tr>
+            <tr>
+              <td><code>--label</code></td>
+              <td class="env">-</td>
+              <td><code>labels</code></td>
+              <td class="default">-</td>
+              <td class="desc">Label (repeatable)</td>
+            </tr>
+            <tr>
+              <td><code>--remote-command</code></td>
+              <td class="env">REMOTE_COMMANDS</td>
+              <td><code>remoteCommands</code></td>
+              <td class="default">-</td>
+              <td class="desc">Post-deploy command (repeatable)</td>
+            </tr>
+            <tr>
+              <td><code>--config</code></td>
+              <td class="env">-</td>
+              <td><code>-</code></td>
+              <td class="default">pipe.yaml</td>
+              <td class="desc">Config file path</td>
+            </tr>
+            <tr>
+              <td><code>--rollback</code></td>
+              <td class="env">-</td>
+              <td><code>-</code></td>
+              <td class="default">false</td>
+              <td class="desc">Rollback to previous version</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="output" class="ref-section">
+        <h2>Output</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Flag</th><th>Env</th><th>YAML</th><th>Default</th><th>Description</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>--dry-run</code></td>
+              <td class="env">DRY_RUN</td>
+              <td><code>-</code></td>
+              <td class="default">false</td>
+              <td class="desc">Preview without making changes</td>
+            </tr>
+            <tr>
+              <td><code>--verbose</code>, <code>-v</code></td>
+              <td class="env">VERBOSE</td>
+              <td><code>-</code></td>
+              <td class="default">false</td>
+              <td class="desc">Detailed output</td>
+            </tr>
+            <tr>
+              <td><code>--json</code></td>
+              <td class="env">JSON_OUTPUT</td>
+              <td><code>-</code></td>
+              <td class="default">false</td>
+              <td class="desc">Output stats as JSON</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <div class="yaml-example">
+        <h3>Full YAML Example</h3>
+        <pre><code><span class="comment"># pipe.yaml</span>
+<span class="key">host:</span> <span class="val">prod.example.com</span>
+<span class="key">user:</span> <span class="val">deploy</span>
+<span class="key">sshKey:</span> <span class="val">~/.ssh/deploy_key</span>
+
+<span class="key">image:</span> <span class="val">my-app</span>
+<span class="key">tag:</span> <span class="val">${VERSION:-latest}</span>
+<span class="key">platform:</span> <span class="val">linux/amd64</span>
+
+<span class="key">containerName:</span> <span class="val">my-app</span>
+<span class="key">containerPort:</span> <span class="val">"3000"</span>
+<span class="key">hostPort:</span> <span class="val">"80"</span>
+<span class="key">restartPolicy:</span> <span class="val">unless-stopped</span>
+
+<span class="key">healthCmd:</span> <span class="val">"curl -f http://localhost:3000/health || exit 1"</span>
+<span class="key">healthInterval:</span> <span class="val">"30s"</span>
+<span class="key">healthTimeout:</span> <span class="val">"10s"</span>
+<span class="key">healthRetries:</span> <span class="val">3</span>
+
+<span class="key">cpus:</span> <span class="val">"1"</span>
+<span class="key">memory:</span> <span class="val">"512m"</span>
+
+<span class="key">env:</span>
+  <span class="key">NODE_ENV:</span> <span class="val">production</span>
+  <span class="key">LOG_LEVEL:</span> <span class="val">warn</span>
+
+<span class="key">volumes:</span>
+  - <span class="val">/data:/app/data</span>
+  - <span class="val">/logs:/app/logs</span>
+
+<span class="key">labels:</span>
+  <span class="key">app:</span> <span class="val">my-app</span>
+  <span class="key">environment:</span> <span class="val">production</span>
+
+<span class="key">logDriver:</span> <span class="val">json-file</span>
+<span class="key">logOpts:</span>
+  <span class="key">max-size:</span> <span class="val">"10m"</span>
+  <span class="key">max-file:</span> <span class="val">"3"</span>
+
+<span class="key">init:</span> <span class="val">true</span>
+
+<span class="key">remoteCommands:</span>
+  - <span class="val">"docker system prune -f --filter 'until=24h'"</span></code></pre>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="images/logo-64.png" alt="Pipe" class="footer-logo">
+          <span>pipe</span>
+        </div>
+        <p>Open source Docker deployment tool.</p>
+        <div class="footer-links">
+          <a href="https://github.com/bjarneo/pipe" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/bjarneo/pipe/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/bjarneo/pipe/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

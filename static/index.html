@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pipe - Docker Deployment Without the Registry</title>
+  <meta name="description" content="Deploy Docker images to remote hosts via SSH. No registry required. Delta transfers for speed.">
+  <meta property="og:title" content="Pipe - Docker Deployment Without the Registry">
+  <meta property="og:description" content="Deploy Docker images to remote hosts via SSH. No registry required. Delta transfers for speed.">
+  <meta property="og:image" content="images/og-image.png">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Pipe - Docker Deployment Without the Registry">
+  <meta name="twitter:description" content="Deploy Docker images to remote hosts via SSH. No registry required.">
+  <meta name="twitter:image" content="images/og-image.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+</head>
+<body>
+  <div class="noise"></div>
+
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="#" class="logo">
+        <img src="images/logo-64.png" alt="Pipe" class="logo-img">
+        <span class="logo-text">pipe</span>
+      </a>
+      <div class="nav-links">
+        <a href="#features">Features</a>
+        <a href="#quickstart">Quick Start</a>
+        <a href="#installation">Install</a>
+        <a href="config.html">Reference</a>
+        <a href="ci.html">CI/CD</a>
+        <a href="#examples">Examples</a>
+        <a href="https://github.com/bjarneo/pipe" class="nav-github" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main>
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero-bg">
+        <div class="hero-grid"></div>
+        <div class="hero-glow"></div>
+      </div>
+      <div class="container hero-content">
+        <div class="hero-badge">Open Source CLI Tool</div>
+        <h1 class="hero-title">
+          Deploy Docker images<br>
+          <span class="gradient-text">without a registry</span>
+        </h1>
+        <p class="hero-subtitle">
+          Pipe transfers Docker images directly to remote hosts via SSH.<br>
+          Delta transfers send only changed layers. No registry setup required.
+        </p>
+        <div class="hero-cta">
+          <a href="#quickstart" class="btn btn-primary">Get Started</a>
+          <a href="#features" class="btn btn-secondary">Learn More</a>
+        </div>
+        <div class="hero-terminal">
+          <div class="terminal-header">
+            <div class="terminal-dots">
+              <span></span><span></span><span></span>
+            </div>
+            <div class="terminal-title">terminal</div>
+          </div>
+          <div class="terminal-body">
+            <div class="terminal-line">
+              <span class="terminal-prompt">$</span>
+              <span class="terminal-command">pipe --host server.com --user deploy</span>
+            </div>
+            <div class="terminal-output">
+              <span class="terminal-step">[1/4]</span> Building image... <span class="terminal-success">done</span>
+            </div>
+            <div class="terminal-output">
+              <span class="terminal-step">[2/4]</span> Analyzing layers... <span class="terminal-info">3 changed, 12 cached</span>
+            </div>
+            <div class="terminal-output">
+              <span class="terminal-step">[3/4]</span> Transferring delta... <span class="terminal-success">47MB (saved 312MB)</span>
+            </div>
+            <div class="terminal-output">
+              <span class="terminal-step">[4/4]</span> Starting container... <span class="terminal-success">running</span>
+            </div>
+            <div class="terminal-line terminal-complete">
+              <span class="terminal-check">✓</span> Deployed in <span class="terminal-highlight">23.4s</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="section features">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Why Pipe?</h2>
+          <p class="section-subtitle">Simple deployment without the infrastructure overhead</p>
+        </div>
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+              </svg>
+            </div>
+            <h3>Delta Transfers</h3>
+            <p>Only changed Docker layers are transferred. Redeploys typically send just megabytes instead of the full image.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="3" y="11" width="18" height="11" rx="2"/>
+                <path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+            </div>
+            <h3>No Registry Required</h3>
+            <p>Skip Docker Hub, ECR, or self-hosted registries. Images go directly from your machine to the server via SSH.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"/>
+                <path d="M2 17l10 5 10-5"/>
+                <path d="M2 12l10 5 10-5"/>
+              </svg>
+            </div>
+            <h3>Zero Configuration</h3>
+            <p>Works with a single command. Add a config file when you need more control over builds and containers.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M9 12l2 2 4-4"/>
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+              </svg>
+            </div>
+            <h3>Built-in Rollback</h3>
+            <p>One command to roll back to the previous deployment. Version your tags and Pipe handles the rest.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M4 6h16M4 12h16M4 18h7"/>
+              </svg>
+            </div>
+            <h3>Full Docker Support</h3>
+            <p>Health checks, resource limits, volumes, networks, capabilities, logging drivers—all configurable.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M16 18l6-6-6-6"/>
+                <path d="M8 6l-6 6 6 6"/>
+              </svg>
+            </div>
+            <h3>CI/CD Ready</h3>
+            <p>Environment variables, JSON output for automation, and dry-run mode for testing pipelines.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Quick Start Section -->
+    <section id="quickstart" class="section quickstart">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Quick Start</h2>
+          <p class="section-subtitle">Deploy your first container in under a minute</p>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-number">1</div>
+            <div class="step-content">
+              <h3>Install Pipe</h3>
+              <div class="code-block">
+                <div class="code-header">
+                  <span>bash</span>
+                  <button class="copy-btn" data-copy="go install github.com/bjarneo/pipe@latest">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/>
+                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                    </svg>
+                  </button>
+                </div>
+                <pre><code>go install github.com/bjarneo/pipe@latest</code></pre>
+              </div>
+              <p class="step-note">Or download a binary from the <a href="https://github.com/bjarneo/pipe/releases">releases page</a>.</p>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">2</div>
+            <div class="step-content">
+              <h3>Create a Dockerfile</h3>
+              <div class="code-block">
+                <div class="code-header">
+                  <span>Dockerfile</span>
+                  <button class="copy-btn" data-copy="FROM node:20-alpine
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --only=production
+COPY . .
+EXPOSE 3000
+CMD [&quot;node&quot;, &quot;server.js&quot;]">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/>
+                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                    </svg>
+                  </button>
+                </div>
+                <pre><code><span class="token-keyword">FROM</span> node:20-alpine
+<span class="token-keyword">WORKDIR</span> /app
+<span class="token-keyword">COPY</span> package*.json ./
+<span class="token-keyword">RUN</span> npm ci --only=production
+<span class="token-keyword">COPY</span> . .
+<span class="token-keyword">EXPOSE</span> 3000
+<span class="token-keyword">CMD</span> [<span class="token-string">"node"</span>, <span class="token-string">"server.js"</span>]</code></pre>
+              </div>
+            </div>
+          </div>
+          <div class="step">
+            <div class="step-number">3</div>
+            <div class="step-content">
+              <h3>Deploy</h3>
+              <div class="code-block">
+                <div class="code-header">
+                  <span>bash</span>
+                  <button class="copy-btn" data-copy="pipe --host server.com --user deploy">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="9" y="9" width="13" height="13" rx="2"/>
+                      <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                    </svg>
+                  </button>
+                </div>
+                <pre><code>pipe --host server.com --user deploy</code></pre>
+              </div>
+              <p class="step-note">That's it. Your container is running on port 3000.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Installation Section -->
+    <section id="installation" class="section installation">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Installation</h2>
+          <p class="section-subtitle">Multiple ways to get Pipe on your system</p>
+        </div>
+        <div class="install-grid">
+          <div class="install-card">
+            <h3>Go Install</h3>
+            <p>If you have Go 1.21+ installed:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="go install github.com/bjarneo/pipe@latest">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code>go install github.com/bjarneo/pipe@latest</code></pre>
+            </div>
+          </div>
+          <div class="install-card">
+            <h3>Download Binary</h3>
+            <p>Pre-built binaries for Linux, macOS, and Windows:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="# Download latest release
+curl -sL https://github.com/bjarneo/pipe/releases/latest/download/pipe_linux_amd64 -o pipe
+chmod +x pipe
+sudo mv pipe /usr/local/bin/">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code><span class="token-comment"># Download latest release</span>
+curl -sL https://github.com/bjarneo/pipe/releases/latest/download/pipe_linux_amd64 -o pipe
+chmod +x pipe
+sudo mv pipe /usr/local/bin/</code></pre>
+            </div>
+          </div>
+          <div class="install-card">
+            <h3>Build from Source</h3>
+            <p>Clone and build the latest version:</p>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="git clone https://github.com/bjarneo/pipe.git
+cd pipe
+go build -o pipe .
+sudo mv pipe /usr/local/bin/">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code>git clone https://github.com/bjarneo/pipe.git
+cd pipe
+go build -o pipe .
+sudo mv pipe /usr/local/bin/</code></pre>
+            </div>
+          </div>
+        </div>
+        <div class="requirements">
+          <h3>Requirements</h3>
+          <ul>
+            <li><strong>Local:</strong> Docker installed and running</li>
+            <li><strong>Remote:</strong> SSH access and Docker installed on the target host</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- Configuration Section -->
+    <section id="configuration" class="section configuration">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Configuration</h2>
+          <p class="section-subtitle">CLI flags, environment variables, or YAML config files</p>
+        </div>
+
+        <div class="config-priority">
+          <h3>Priority Order</h3>
+          <div class="priority-list">
+            <div class="priority-item">
+              <span class="priority-num">1</span>
+              <div>
+                <strong>CLI Flags</strong>
+                <span>Highest priority, overrides everything</span>
+              </div>
+            </div>
+            <div class="priority-item">
+              <span class="priority-num">2</span>
+              <div>
+                <strong>Environment Variables</strong>
+                <span>Good for CI/CD and secrets</span>
+              </div>
+            </div>
+            <div class="priority-item">
+              <span class="priority-num">3</span>
+              <div>
+                <strong>Config File</strong>
+                <span>Project defaults in pipe.yaml</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="config-example">
+          <h3>Minimal Config File</h3>
+          <div class="code-block">
+            <div class="code-header">
+              <span>pipe.yaml</span>
+              <button class="copy-btn" data-copy="host: server.com
+user: deploy
+image: my-app
+containerPort: &quot;3000&quot;
+hostPort: &quot;3000&quot;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2"/>
+                  <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                </svg>
+              </button>
+            </div>
+            <pre><code><span class="token-key">host:</span> server.com
+<span class="token-key">user:</span> deploy
+<span class="token-key">image:</span> my-app
+<span class="token-key">containerPort:</span> <span class="token-string">"3000"</span>
+<span class="token-key">hostPort:</span> <span class="token-string">"3000"</span></code></pre>
+          </div>
+        </div>
+
+        <div class="config-reference">
+          <h3>Common Options</h3>
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Flag</th>
+                  <th>Env Variable</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><code>--host</code></td>
+                  <td><code>HOST</code></td>
+                  <td>Remote host <span class="required">required</span></td>
+                </tr>
+                <tr>
+                  <td><code>--user</code></td>
+                  <td><code>HOST_USER</code></td>
+                  <td>SSH username</td>
+                </tr>
+                <tr>
+                  <td><code>--image</code></td>
+                  <td><code>DOCKER_IMAGE_NAME</code></td>
+                  <td>Docker image name</td>
+                </tr>
+                <tr>
+                  <td><code>--tag</code></td>
+                  <td><code>DOCKER_IMAGE_TAG</code></td>
+                  <td>Image tag (default: latest)</td>
+                </tr>
+                <tr>
+                  <td><code>--container-port</code></td>
+                  <td><code>DOCKER_CONTAINER_PORT</code></td>
+                  <td>Port inside container</td>
+                </tr>
+                <tr>
+                  <td><code>--host-port</code></td>
+                  <td><code>HOST_PORT</code></td>
+                  <td>Port on host</td>
+                </tr>
+                <tr>
+                  <td><code>--env</code></td>
+                  <td>—</td>
+                  <td>Environment variable (repeatable)</td>
+                </tr>
+                <tr>
+                  <td><code>--volume</code></td>
+                  <td><code>DOCKER_VOLUMES</code></td>
+                  <td>Volume mount (repeatable)</td>
+                </tr>
+                <tr>
+                  <td><code>--dry-run</code></td>
+                  <td><code>DRY_RUN</code></td>
+                  <td>Preview without changes</td>
+                </tr>
+                <tr>
+                  <td><code>--json</code></td>
+                  <td><code>JSON_OUTPUT</code></td>
+                  <td>Output stats as JSON</td>
+                </tr>
+                <tr>
+                  <td><code>--rollback</code></td>
+                  <td>—</td>
+                  <td>Rollback to previous version</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="config-note">See the <a href="config.html">full configuration reference</a> for all options, or <a href="ci.html">CI/CD integration</a> for GitHub Actions and GitLab CI examples.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Delta Transfer Section -->
+    <section id="delta" class="section delta">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Delta Transfers</h2>
+          <p class="section-subtitle">How Pipe saves bandwidth and time</p>
+        </div>
+        <div class="delta-content">
+          <div class="delta-explanation">
+            <p>Docker images are composed of layers. When you rebuild an image, typically only a few layers change—your application code—while base images and dependencies stay the same.</p>
+            <p>Pipe compares layers between your local image and the remote host, then transfers <strong>only the layers that have changed</strong>.</p>
+            <div class="delta-stats">
+              <div class="delta-stat">
+                <span class="delta-value">~85%</span>
+                <span class="delta-label">Less data transferred on typical redeploys</span>
+              </div>
+              <div class="delta-stat">
+                <span class="delta-value">3-5x</span>
+                <span class="delta-label">Faster deployments compared to full image push</span>
+              </div>
+            </div>
+          </div>
+          <div class="delta-visual">
+            <div class="layer-diagram">
+              <div class="layer-side">
+                <div class="layer-title">Full Image</div>
+                <div class="layer layer-base">Base OS (50MB)</div>
+                <div class="layer layer-runtime">Runtime (120MB)</div>
+                <div class="layer layer-deps">Dependencies (180MB)</div>
+                <div class="layer layer-app">App Code (9MB)</div>
+                <div class="layer-total">Total: 359MB</div>
+              </div>
+              <div class="layer-arrow">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M5 12h14M12 5l7 7-7 7"/>
+                </svg>
+              </div>
+              <div class="layer-side">
+                <div class="layer-title">Delta Transfer</div>
+                <div class="layer layer-cached">
+                  <span>Cached</span>
+                </div>
+                <div class="layer layer-cached">
+                  <span>Cached</span>
+                </div>
+                <div class="layer layer-cached">
+                  <span>Cached</span>
+                </div>
+                <div class="layer layer-app layer-changed">App Code (9MB)</div>
+                <div class="layer-total highlight">Transferred: 9MB</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Examples Section -->
+    <section id="examples" class="section examples">
+      <div class="container">
+        <div class="section-header">
+          <h2 class="section-title">Examples</h2>
+          <p class="section-subtitle">Common deployment patterns</p>
+        </div>
+
+        <div class="example-grid">
+          <div class="example-card">
+            <h3>Basic Deploy</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="pipe --host server.com --user deploy">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code>pipe --host server.com --user deploy</code></pre>
+            </div>
+          </div>
+
+          <div class="example-card">
+            <h3>With Environment Variables</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="pipe --host server.com --user deploy \
+  --env NODE_ENV=production \
+  --env LOG_LEVEL=info \
+  --env-file .env.production">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code>pipe --host server.com --user deploy \
+  --env NODE_ENV=production \
+  --env LOG_LEVEL=info \
+  --env-file .env.production</code></pre>
+            </div>
+          </div>
+
+          <div class="example-card">
+            <h3>With Volumes</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="pipe --host server.com --user deploy \
+  --volume /data:/app/data \
+  --volume /logs:/app/logs">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code>pipe --host server.com --user deploy \
+  --volume /data:/app/data \
+  --volume /logs:/app/logs</code></pre>
+            </div>
+          </div>
+
+          <div class="example-card">
+            <h3>JSON Output for CI/CD</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="# Output JSON stats
+pipe --json
+
+# Pipe to jq for processing
+pipe --json | jq '.timing.duration'
+
+# Or use env var
+JSON_OUTPUT=true pipe">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code><span class="token-comment"># Output JSON stats</span>
+pipe --json
+
+<span class="token-comment"># Pipe to jq for processing</span>
+pipe --json | jq '.timing.duration'
+
+<span class="token-comment"># Or use env var</span>
+JSON_OUTPUT=true pipe</code></pre>
+            </div>
+          </div>
+
+          <div class="example-card">
+            <h3>Production Config File</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>pipe.yaml</span>
+                <button class="copy-btn" data-copy="host: prod.example.com
+user: deploy
+image: my-app
+tag: ${VERSION:-latest}
+
+containerName: my-app
+containerPort: &quot;3000&quot;
+hostPort: &quot;80&quot;
+restartPolicy: unless-stopped
+
+healthCmd: &quot;curl -f http://localhost:3000/health || exit 1&quot;
+healthInterval: &quot;30s&quot;
+healthTimeout: &quot;10s&quot;
+healthRetries: 3
+
+cpus: &quot;1&quot;
+memory: &quot;512m&quot;
+
+env:
+  NODE_ENV: production">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code><span class="token-key">host:</span> prod.example.com
+<span class="token-key">user:</span> deploy
+<span class="token-key">image:</span> my-app
+<span class="token-key">tag:</span> ${VERSION:-latest}
+
+<span class="token-key">containerName:</span> my-app
+<span class="token-key">containerPort:</span> <span class="token-string">"3000"</span>
+<span class="token-key">hostPort:</span> <span class="token-string">"80"</span>
+<span class="token-key">restartPolicy:</span> unless-stopped
+
+<span class="token-key">healthCmd:</span> <span class="token-string">"curl -f http://localhost:3000/health || exit 1"</span>
+<span class="token-key">healthInterval:</span> <span class="token-string">"30s"</span>
+<span class="token-key">healthTimeout:</span> <span class="token-string">"10s"</span>
+<span class="token-key">healthRetries:</span> 3
+
+<span class="token-key">cpus:</span> <span class="token-string">"1"</span>
+<span class="token-key">memory:</span> <span class="token-string">"512m"</span>
+
+<span class="token-key">env:</span>
+  <span class="token-key">NODE_ENV:</span> production</code></pre>
+            </div>
+          </div>
+
+          <div class="example-card">
+            <h3>Rollback</h3>
+            <div class="code-block">
+              <div class="code-header">
+                <span>bash</span>
+                <button class="copy-btn" data-copy="# Deploy with version tags
+pipe --tag v1.0.0
+
+# Later, deploy a new version
+pipe --tag v1.0.1
+
+# Something went wrong? Roll back
+pipe --rollback">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="9" y="9" width="13" height="13" rx="2"/>
+                    <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
+                  </svg>
+                </button>
+              </div>
+              <pre><code><span class="token-comment"># Deploy with version tags</span>
+pipe --tag v1.0.0
+
+<span class="token-comment"># Later, deploy a new version</span>
+pipe --tag v1.0.1
+
+<span class="token-comment"># Something went wrong? Roll back</span>
+pipe --rollback</code></pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="section cta">
+      <div class="container">
+        <div class="cta-content">
+          <h2>Ready to simplify your deployments?</h2>
+          <p>Get started with Pipe in seconds. No registry setup required.</p>
+          <div class="cta-buttons">
+            <a href="#installation" class="btn btn-primary">Install Pipe</a>
+            <a href="https://github.com/bjarneo/pipe" class="btn btn-secondary" target="_blank" rel="noopener">View on GitHub</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="images/logo-64.png" alt="Pipe" class="footer-logo">
+          <span>pipe</span>
+        </div>
+        <p>Open source Docker deployment tool.</p>
+        <div class="footer-links">
+          <a href="https://github.com/bjarneo/pipe" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/bjarneo/pipe/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/bjarneo/pipe/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>

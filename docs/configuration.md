@@ -171,6 +171,7 @@ remoteCommands:
 | `--ssh-key` | `SSH_KEY_PATH` | - | SSH private key path |
 | `--dry-run` | `DRY_RUN` | `false` | Preview without changes |
 | `--verbose`, `-v` | `VERBOSE` | `false` | Detailed output |
+| `--json` | `JSON_OUTPUT` | `false` | Output stats as JSON |
 
 ### Image Options
 

@@ -1,6 +1,12 @@
-# Pipe
+<p align="center">
+  <img src="logo.png" alt="Pipe" width="200">
+</p>
 
-> **Deploy Docker containers anywhere via SSH - no registry required.**
+<h1 align="center">Pipe</h1>
+
+<p align="center">
+  <strong>Deploy Docker containers anywhere via SSH - no registry required.</strong>
+</p>
 
 Pipe builds your Docker image locally, transfers only the changed layers to your server, and starts your container. It's like `git push` for containers.
 
