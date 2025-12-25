@@ -92,6 +92,8 @@ pipe --dry-run               # Preview without making changes
 pipe --verbose               # Show detailed output
 pipe --tag v2.0.0            # Deploy specific version
 pipe --rollback              # Rollback to previous version
+pipe --stats                 # Show container stats (CPU, memory, network)
+pipe --stats --json          # Output stats as JSON
 pipe --config prod.yaml      # Use different config
 ```
 

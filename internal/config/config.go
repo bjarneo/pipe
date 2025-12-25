@@ -65,6 +65,7 @@ type Config struct {
 	DryRun     bool `json:"dryRun" yaml:"dryRun"`
 	Verbose    bool `json:"verbose" yaml:"verbose"`
 	JSONOutput bool `json:"jsonOutput" yaml:"jsonOutput"`
+	ShowStats  bool `json:"showStats" yaml:"showStats"`
 }
 
 // arrayFlags allows for multiple flag values
@@ -190,6 +191,7 @@ func defineFlags(cfg *Config, flags *flagSet) {
 	flag.BoolVar(&cfg.Verbose, "verbose", false, "Show detailed output")
 	flag.BoolVar(&cfg.Verbose, "v", false, "Show detailed output (shorthand)")
 	flag.BoolVar(&cfg.JSONOutput, "json", false, "Output deployment stats as JSON")
+	flag.BoolVar(&cfg.ShowStats, "stats", false, "Show container stats from remote host")
 	flag.BoolVar(&flags.showHelp, "help", false, "Show help message")
 	flag.BoolVar(&cfg.Rollback, "rollback", false, "Rollback to previous version")
 	flag.BoolVar(&flags.showVersion, "version", false, "Show version information")
@@ -570,6 +572,7 @@ func mergeConfig(fileConfig, cliConfig Config, flags flagSet) Config {
 	result.Verbose = mergeBool(cliConfig.Verbose, "VERBOSE", fileConfig.Verbose)
 	result.JSONOutput = mergeBool(cliConfig.JSONOutput, "JSON_OUTPUT", fileConfig.JSONOutput)
 	result.Rollback = cliConfig.Rollback
+	result.ShowStats = cliConfig.ShowStats
 
 	// Merge maps
 	mergeMaps(&result, flags)
@@ -803,7 +806,8 @@ Remote Execution:
 
 Other:
   --verbose, -v       Show detailed output
-  --json              Output deployment stats as JSON (for piping to other tools)
+  --json              Output stats as JSON (for piping to other tools)
+  --stats             Show container stats from remote host (CPU, memory, network, etc.)
   --rollback          Rollback to the previous version
   --version           Show version information
   --help              Show this help message
@@ -910,6 +914,12 @@ Examples:
   # Rollback to previous version
   pipe --rollback
 
-  # Output stats as JSON (for piping to other tools)
+  # Show container stats from remote host
+  pipe --stats
+
+  # Output container stats as JSON
+  pipe --stats --json | jq '.resources'
+
+  # Output deployment stats as JSON (for piping to other tools)
   pipe --json | jq '.duration'
 `

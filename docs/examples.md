@@ -50,6 +50,87 @@ pipe --json | jq '.timing.duration'
 JSON_OUTPUT=true pipe
 ```
 
+## Container Stats
+
+View real-time container statistics from the remote host:
+
+### Basic Stats
+
+```bash
+# Show container stats (CPU, memory, network, etc.)
+pipe --stats
+```
+
+Example output:
+```
+╔══════════════════════════════════════════════════════╗
+║                   CONTAINER STATS                    ║
+╠══════════════════════════════════════════════════════╣
+║  Name: my-app                                        ║
+║  ID: a1b2c3d4e5f6                                    ║
+║  Image: my-app:latest                                ║
+║  Status: 🟢 running                                  ║
+║  Created: 2025-01-15 10:30:00                        ║
+║  Uptime: 2d 5h 30m                                   ║
+╟──────────────────────────────────────────────────────╢
+║                   Resource Usage                     ║
+╟──────────────────────────────────────────────────────╢
+║  CPU: 0.50%                                          ║
+║  Memory: 128MiB / 512MiB (25.00%)                    ║
+║  PIDs: 12                                            ║
+╟──────────────────────────────────────────────────────╢
+║                      Network                         ║
+╟──────────────────────────────────────────────────────╢
+║  I/O: 1.2MB / 500KB                                  ║
+║  Ports:                                              ║
+║    3000/tcp -> 0.0.0.0:3000                          ║
+╟──────────────────────────────────────────────────────╢
+║                      Storage                         ║
+╟──────────────────────────────────────────────────────╢
+║  Block I/O: 10MB / 5MB                               ║
+╚══════════════════════════════════════════════════════╝
+```
+
+### JSON Stats Output
+
+```bash
+# Output stats as JSON for scripting
+pipe --stats --json
+
+# Pipe to jq for specific values
+pipe --stats --json | jq '.resources.cpuPercent'
+pipe --stats --json | jq '.container.uptime'
+```
+
+JSON output structure:
+```json
+{
+  "container": {
+    "name": "my-app",
+    "id": "a1b2c3d4e5f6",
+    "image": "my-app:latest",
+    "status": "running",
+    "health": "healthy",
+    "created": "2025-01-15 10:30:00",
+    "uptime": "2d 5h 30m"
+  },
+  "resources": {
+    "cpuPercent": "0.50%",
+    "memUsage": "128MiB / 512MiB",
+    "memPercent": "25.00%",
+    "pids": "12"
+  },
+  "network": {
+    "io": "1.2MB / 500KB",
+    "ports": ["3000/tcp -> 0.0.0.0:3000"]
+  },
+  "storage": {
+    "blockIO": "10MB / 5MB"
+  },
+  "restartCount": 0
+}
+```
+
 ## Configuration File Examples
 
 ### Minimal Config

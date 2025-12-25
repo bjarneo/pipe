@@ -172,6 +172,7 @@ remoteCommands:
 | `--dry-run` | `DRY_RUN` | `false` | Preview without changes |
 | `--verbose`, `-v` | `VERBOSE` | `false` | Detailed output |
 | `--json` | `JSON_OUTPUT` | `false` | Output stats as JSON |
+| `--stats` | - | `false` | Show container stats from remote host |
 
 ### Image Options
 
@@ -244,6 +245,7 @@ remoteCommands:
 |------|--------------|---------|-------------|
 | `--remote-command` | `REMOTE_COMMANDS` | - | Post-deploy command (repeatable) |
 | `--rollback` | - | `false` | Rollback to previous |
+| `--stats` | - | `false` | Show container stats (CPU, memory, network) |
 
 ---
 
