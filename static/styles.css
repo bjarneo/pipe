@@ -49,6 +49,11 @@
   padding: 0;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
 html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
@@ -105,6 +110,7 @@ img {
   max-width: var(--container-max);
   margin: 0 auto;
   padding: 0 var(--container-padding);
+  overflow-x: hidden;
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -381,6 +387,7 @@ img {
 /* Terminal */
 .hero-terminal {
   max-width: 600px;
+  width: 100%;
   margin: 3rem auto 0;
   border-radius: 0;
   background: var(--bg-secondary);
@@ -559,7 +566,7 @@ img {
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 1.5rem;
 }
 
@@ -672,6 +679,7 @@ img {
   background: var(--bg-tertiary);
   border: 1px solid var(--border);
   overflow: hidden;
+  max-width: 100%;
 }
 
 .code-header {
@@ -766,7 +774,7 @@ img {
 
 .install-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
   gap: 1.5rem;
   margin-bottom: 3rem;
 }
@@ -898,6 +906,7 @@ img {
   border-radius: 0;
   border: 1px solid var(--border);
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 /* Custom scrollbars for tables */
@@ -991,6 +1000,8 @@ td code {
   grid-template-columns: 1fr 1fr;
   gap: 4rem;
   align-items: center;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 @media (max-width: 900px) {
@@ -1045,10 +1056,12 @@ td code {
   display: flex;
   align-items: center;
   gap: 1.5rem;
+  max-width: 100%;
 }
 
 .layer-side {
   flex: 1;
+  min-width: 0;
 }
 
 .layer-title {
@@ -1113,7 +1126,7 @@ td code {
 
 .example-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(350px, 100%), 1fr));
   gap: 1.5rem;
 }
 

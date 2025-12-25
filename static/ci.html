@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
   <style>
-    .ci-page { padding: 5rem 0 3rem; }
+    .ci-page { padding: 5rem 0 3rem; overflow-x: hidden; }
     .ci-header { margin-bottom: 2rem; }
     .ci-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
     .ci-header p { color: var(--text-secondary); font-size: 0.9rem; }
@@ -79,6 +79,8 @@
       margin: 1rem 0;
       background: var(--bg-tertiary);
       border: 1px solid var(--border);
+      max-width: 100%;
+      overflow: hidden;
     }
     .workflow-header {
       display: flex;
@@ -97,6 +99,7 @@
       font-family: var(--font-mono);
       font-size: 0.75rem;
       line-height: 1.5;
+      -webkit-overflow-scrolling: touch;
     }
     .workflow-block .key { color: var(--accent); }
     .workflow-block .str { color: #c3e88d; }
@@ -126,6 +129,9 @@
       border-collapse: collapse;
       font-size: 0.8rem;
       margin: 1rem 0;
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .secrets-table th {
       text-align: left;

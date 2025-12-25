@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="styles.css">
   <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
   <style>
-    .ref-page { padding: 5rem 0 3rem; }
+    .ref-page { padding: 5rem 0 3rem; overflow-x: hidden; }
     .ref-header { margin-bottom: 2rem; }
     .ref-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
     .ref-header p { color: var(--text-secondary); font-size: 0.9rem; }
@@ -41,7 +41,7 @@
       padding-bottom: 0.5rem;
       border-bottom: 1px solid var(--border);
     }
-    .ref-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
     .ref-table th {
       text-align: left;
       padding: 0.5rem;
@@ -83,6 +83,8 @@
       padding: 1rem;
       background: var(--bg-tertiary);
       border: 1px solid var(--border);
+      max-width: 100%;
+      overflow: hidden;
     }
     .yaml-example h3 {
       font-size: 0.85rem;
@@ -94,6 +96,7 @@
       font-size: 0.75rem;
       line-height: 1.5;
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
     }
     .yaml-example .key { color: var(--accent); }
     .yaml-example .val { color: #c3e88d; }
