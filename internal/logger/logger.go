@@ -64,6 +64,20 @@ func (l *Logger) Step(message string) error {
 	return err
 }
 
+// StepProgress logs a numbered deployment step with status
+func (l *Logger) StepProgress(stepNum, total int, action, status string) error {
+	if l == nil || l.writer == nil {
+		return nil
+	}
+	timestamp := time.Now().UTC().Format(time.RFC3339)
+	logMessage := fmt.Sprintf("[%s] STEP [%d/%d]: %s... %s\n", timestamp, stepNum, total, action, status)
+	if !l.quiet {
+		fmt.Printf("[%d/%d] %s... %s\n", stepNum, total, action, status)
+	}
+	_, err := l.writer.Write([]byte(logMessage))
+	return err
+}
+
 // Info logs an informational message (only in verbose mode on console)
 func (l *Logger) Info(message string) error {
 	if l == nil || l.writer == nil {

@@ -13,6 +13,15 @@ import (
 	"github.com/bjarneo/pipe/internal/stats"
 )
 
+// TransferResult contains information about the image transfer
+type TransferResult struct {
+	NewLayers        int
+	CachedLayers     int
+	TotalLayers      int
+	TransferredBytes int64
+	ImageSize        int64
+}
+
 // Check checks if Docker is installed and running locally and remotely
 func Check(cfg *config.Config, log *logger.Logger) error {
 	// Check local Docker
@@ -102,16 +111,24 @@ func calculateLayerDiff(localLayers []string, remoteLayers map[string]bool) (new
 }
 
 // Transfer transfers the Docker image to the remote host, only sending changed layers
-func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) error {
+func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) (*TransferResult, error) {
 	ref := imageRef(cfg)
+	result := &TransferResult{}
 
 	// Get image size for stats
 	getImageSize(cfg, log, st, ref)
+	result.ImageSize = st.ImageSize
 
 	// Get local layers
 	localLayers, err := getLocalLayers(log, ref)
 	if err != nil || len(localLayers) == 0 {
-		return fullTransfer(cfg, log, st)
+		if err := fullTransfer(cfg, log, st); err != nil {
+			return nil, err
+		}
+		result.TransferredBytes = st.TransferredBytes
+		result.TotalLayers = len(localLayers)
+		result.NewLayers = len(localLayers)
+		return result, nil
 	}
 
 	// Get cached remote layers
@@ -120,13 +137,20 @@ func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) error {
 	// Calculate layer diff
 	newLayers, cachedLayers := calculateLayerDiff(localLayers, remoteLayers)
 	st.SetLayerStats(len(localLayers), cachedLayers, newLayers)
+	result.TotalLayers = len(localLayers)
+	result.NewLayers = newLayers
+	result.CachedLayers = cachedLayers
 
 	// If no remote layers or all new, use full transfer
 	if len(remoteLayers) == 0 || newLayers == len(localLayers) {
 		if len(remoteLayers) == 0 {
 			log.Info("First deployment - transferring all layers")
 		}
-		return fullTransfer(cfg, log, st)
+		if err := fullTransfer(cfg, log, st); err != nil {
+			return nil, err
+		}
+		result.TransferredBytes = st.TransferredBytes
+		return result, nil
 	}
 
 	// Log layer statistics
@@ -135,7 +159,11 @@ func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) error {
 		cachedLayers, len(localLayers), cachePercent, newLayers))
 
 	// Use delta transfer for efficiency
-	return deltaTransfer(cfg, log, st, ref, localLayers, remoteLayers)
+	if err := deltaTransfer(cfg, log, st, ref, localLayers, remoteLayers); err != nil {
+		return nil, err
+	}
+	result.TransferredBytes = st.TransferredBytes
+	return result, nil
 }
 
 // compressionRatio is the estimated gzip compression ratio for Docker images

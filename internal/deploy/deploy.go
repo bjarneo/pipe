@@ -23,13 +23,6 @@ func Deploy(cfg *config.Config, log *logger.Logger) error {
 	st.SetImageInfo(cfg.Image, cfg.Tag)
 	st.SetContainerInfo(cfg.ContainerName, cfg.Host)
 
-	// Log start of deployment
-	if cfg.DryRun {
-		log.Step("DRY RUN - no changes will be made")
-	} else {
-		log.Step(fmt.Sprintf("Deploying %s:%s to %s", cfg.Image, cfg.Tag, cfg.Host))
-	}
-
 	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return err
@@ -37,63 +30,59 @@ func Deploy(cfg *config.Config, log *logger.Logger) error {
 
 	// Dry run: print configuration summary and exit
 	if cfg.DryRun {
+		log.Step("DRY RUN - no changes will be made")
 		return printDryRunSummary(cfg, log)
 	}
 
-	// Preliminary checks
-	log.Step("Checking Docker and SSH connectivity")
+	// Preliminary checks (silent, not counted as a step)
 	if err := docker.Check(cfg, log); err != nil {
 		return err
 	}
-
 	if err := ssh.Check(cfg, log); err != nil {
 		return err
 	}
 
 	// Build Docker image
-	log.Step("Building Docker image")
 	if err := docker.Build(cfg, log); err != nil {
 		return err
 	}
+	log.StepProgress(1, 4, "Building image", "done")
 
 	// Transfer Docker image
-	log.Step("Transferring image to remote host")
-	if err := docker.Transfer(cfg, log, st); err != nil {
+	transferResult, err := docker.Transfer(cfg, log, st)
+	if err != nil {
 		return err
 	}
+	log.StepProgress(2, 4, "Analyzing layers", fmt.Sprintf("%d changed, %d cached", transferResult.NewLayers, transferResult.CachedLayers))
+	log.StepProgress(3, 4, "Transferring delta", fmt.Sprintf("%s (saved %s)", stats.FormatBytes(transferResult.TransferredBytes), stats.FormatBytes(transferResult.ImageSize-transferResult.TransferredBytes)))
 
-	// Copy environment file if it exists
+	// Copy environment file if it exists (silent step)
 	if cfg.EnvFile != "" {
-		log.Step("Copying environment file")
 		if err := copyEnvFile(cfg, log); err != nil {
 			return err
 		}
 	}
 
 	// Deploy container
-	log.Step("Starting container")
 	if err := docker.Deploy(cfg, log); err != nil {
 		return err
 	}
+	log.StepProgress(4, 4, "Starting container", "running")
 
-	// Execute remote commands if specified
+	// Execute remote commands if specified (silent step)
 	if len(cfg.RemoteCommands) > 0 {
-		log.Step("Running post-deployment commands")
 		if err := executeRemoteCommands(cfg, log); err != nil {
 			return err
 		}
 	}
 
-	// Print deployment summary
+	// JSON output mode
 	if cfg.JSONOutput {
 		jsonOutput, err := st.ToJSON()
 		if err != nil {
 			return fmt.Errorf("failed to generate JSON output: %w", err)
 		}
 		fmt.Println(jsonOutput)
-	} else {
-		st.PrintSummary()
-		fmt.Println("Deployment completed successfully!")
 	}
 
 	return nil
