@@ -12,6 +12,10 @@ import (
 	"github.com/bjarneo/pipe/internal/logger"
 )
 
+// =============================================================================
+// Types
+// =============================================================================
+
 // CommandResult contains the output of a command
 type CommandResult struct {
 	Stdout string
@@ -19,12 +23,9 @@ type CommandResult struct {
 }
 
 // Executor defines the interface for command execution
-// This allows for mocking in tests and alternative implementations
 type Executor interface {
-	// Execute runs a command and returns the result
-	Execute(command string, description string) (*CommandResult, error)
-	// ExecuteContext runs a command with context support
-	ExecuteContext(ctx context.Context, command string, description string) (*CommandResult, error)
+	Execute(command, description string) (*CommandResult, error)
+	ExecuteContext(ctx context.Context, command, description string) (*CommandResult, error)
 }
 
 // DefaultExecutor implements Executor using the real shell
@@ -38,41 +39,29 @@ func NewExecutor(log *logger.Logger) *DefaultExecutor {
 }
 
 // Execute runs a command using the default executor
-func (e *DefaultExecutor) Execute(command string, description string) (*CommandResult, error) {
+func (e *DefaultExecutor) Execute(command, description string) (*CommandResult, error) {
 	return ExecuteCommand(e.Log, command, description)
 }
 
-// ExecuteContext runs a command with context support using the default executor
-func (e *DefaultExecutor) ExecuteContext(ctx context.Context, command string, description string) (*CommandResult, error) {
+// ExecuteContext runs a command with context support
+func (e *DefaultExecutor) ExecuteContext(ctx context.Context, command, description string) (*CommandResult, error) {
 	return ExecuteCommandContext(ctx, e.Log, command, description)
 }
 
-// GetKeyFlag returns the SSH key flag if SSHKey is set
-func GetKeyFlag(cfg *config.Config) string {
-	if cfg.SSHKey != "" {
-		return fmt.Sprintf("-i %s", cfg.SSHKey)
-	}
-	return ""
-}
+// =============================================================================
+// SSH Command Building
+// =============================================================================
 
-// GetPortFlag returns the SSH port flag if non-default
-func GetPortFlag(cfg *config.Config) string {
-	if cfg.SSHPort != "" && cfg.SSHPort != "22" {
-		return fmt.Sprintf("-p %s", cfg.SSHPort)
-	}
-	return ""
-}
-
-// GetCommand returns the full SSH command with or without the key flag
+// GetCommand returns the full SSH command string
 func GetCommand(cfg *config.Config) string {
 	var parts []string
 	parts = append(parts, "ssh")
 
-	if keyFlag := GetKeyFlag(cfg); keyFlag != "" {
-		parts = append(parts, keyFlag)
+	if flag := keyFlag(cfg.SSHKey); flag != "" {
+		parts = append(parts, flag)
 	}
-	if portFlag := GetPortFlag(cfg); portFlag != "" {
-		parts = append(parts, portFlag)
+	if flag := portFlag(cfg.SSHPort, "-p"); flag != "" {
+		parts = append(parts, flag)
 	}
 
 	parts = append(parts, fmt.Sprintf("%s@%s", cfg.User, cfg.Host))
@@ -84,36 +73,69 @@ func GetSCPCommand(cfg *config.Config) string {
 	var parts []string
 	parts = append(parts, "scp")
 
-	if keyFlag := GetKeyFlag(cfg); keyFlag != "" {
-		parts = append(parts, keyFlag)
+	if flag := keyFlag(cfg.SSHKey); flag != "" {
+		parts = append(parts, flag)
 	}
-	if cfg.SSHPort != "" && cfg.SSHPort != "22" {
-		parts = append(parts, fmt.Sprintf("-P %s", cfg.SSHPort))
+	if flag := portFlag(cfg.SSHPort, "-P"); flag != "" {
+		parts = append(parts, flag)
 	}
 
 	return strings.Join(parts, " ")
 }
+
+// keyFlag returns the SSH key flag if key is set
+func keyFlag(key string) string {
+	if key != "" {
+		return fmt.Sprintf("-i %s", key)
+	}
+	return ""
+}
+
+// portFlag returns the port flag if non-default
+func portFlag(port, flag string) string {
+	if port != "" && port != "22" {
+		return fmt.Sprintf("%s %s", flag, port)
+	}
+	return ""
+}
+
+// GetKeyFlag returns the SSH key flag if SSHKey is set (exported for compatibility)
+func GetKeyFlag(cfg *config.Config) string {
+	return keyFlag(cfg.SSHKey)
+}
+
+// GetPortFlag returns the SSH port flag if non-default (exported for compatibility)
+func GetPortFlag(cfg *config.Config) string {
+	return portFlag(cfg.SSHPort, "-p")
+}
+
+// =============================================================================
+// Connection Check
+// =============================================================================
 
 // Check checks SSH connection to the remote host
 func Check(cfg *config.Config, log *logger.Logger) error {
 	return CheckContext(context.Background(), cfg, log)
 }
 
-// CheckContext checks SSH connection to the remote host with context support
+// CheckContext checks SSH connection with context support
 func CheckContext(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	command := fmt.Sprintf("%s echo \"SSH connection successful\"", GetCommand(cfg))
 	_, err := ExecuteCommandContext(ctx, log, command, "Checking SSH connection")
 	return err
 }
 
+// =============================================================================
+// Command Execution
+// =============================================================================
+
 // ExecuteCommand executes a shell command and streams the output
-// Deprecated: Use ExecuteCommandContext for better cancellation support
-func ExecuteCommand(log *logger.Logger, command string, description string) (*CommandResult, error) {
+func ExecuteCommand(log *logger.Logger, command, description string) (*CommandResult, error) {
 	return ExecuteCommandContext(context.Background(), log, command, description)
 }
 
-// ExecuteCommandContext executes a shell command with context support for cancellation and timeouts
-func ExecuteCommandContext(ctx context.Context, log *logger.Logger, command string, description string) (*CommandResult, error) {
+// ExecuteCommandContext executes a shell command with context support
+func ExecuteCommandContext(ctx context.Context, log *logger.Logger, command, description string) (*CommandResult, error) {
 	if err := log.Debug(fmt.Sprintf("Executing: %s", command)); err != nil {
 		return nil, err
 	}
@@ -134,31 +156,32 @@ func ExecuteCommandContext(ctx context.Context, log *logger.Logger, command stri
 		return nil, fmt.Errorf("failed to start command: %v", err)
 	}
 
+	// Read output streams concurrently
+	result, scanErr := readOutputStreams(stdout, stderr, log.IsVerbose())
+	if scanErr != nil {
+		return nil, scanErr
+	}
+
+	if err := cmd.Wait(); err != nil {
+		return nil, handleCommandError(ctx, err)
+	}
+
+	return result, nil
+}
+
+// readOutputStreams reads stdout and stderr concurrently
+func readOutputStreams(stdout, stderr interface{ Read([]byte) (int, error) }, verbose bool) (*CommandResult, error) {
 	var stdoutBuilder, stderrBuilder strings.Builder
 	var mu sync.Mutex
 	var wg sync.WaitGroup
-	var scanErr error // Capture any scanner errors
+	var scanErr error
+
 	wg.Add(2)
 
-	verbose := log.IsVerbose()
-
-	// Read stdout in real-time
+	// Read stdout
 	go func() {
 		defer wg.Done()
-		scanner := bufio.NewScanner(stdout)
-		// Increase buffer size to handle long lines (1MB max)
-		buf := make([]byte, 0, 64*1024)
-		scanner.Buffer(buf, 1024*1024)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if verbose {
-				fmt.Println(line)
-			}
-			mu.Lock()
-			stdoutBuilder.WriteString(line + "\n")
-			mu.Unlock()
-		}
-		if err := scanner.Err(); err != nil {
+		if err := readStream(stdout, &stdoutBuilder, &mu, verbose, false); err != nil {
 			mu.Lock()
 			if scanErr == nil {
 				scanErr = fmt.Errorf("stdout scanner error: %w", err)
@@ -167,32 +190,10 @@ func ExecuteCommandContext(ctx context.Context, log *logger.Logger, command stri
 		}
 	}()
 
-	// Read stderr in real-time
+	// Read stderr
 	go func() {
 		defer wg.Done()
-		scanner := bufio.NewScanner(stderr)
-		// Increase buffer size to handle long lines (1MB max)
-		buf := make([]byte, 0, 64*1024)
-		scanner.Buffer(buf, 1024*1024)
-		for scanner.Scan() {
-			line := scanner.Text()
-			if strings.Contains(line, "error") || strings.Contains(line, "Error") {
-				if verbose {
-					fmt.Println("ERROR:", line)
-				}
-				mu.Lock()
-				stderrBuilder.WriteString(line + "\n")
-				mu.Unlock()
-			} else {
-				if verbose {
-					fmt.Println(line)
-				}
-				mu.Lock()
-				stdoutBuilder.WriteString(line + "\n")
-				mu.Unlock()
-			}
-		}
-		if err := scanner.Err(); err != nil {
+		if err := readStream(stderr, &stderrBuilder, &mu, verbose, true); err != nil {
 			mu.Lock()
 			if scanErr == nil {
 				scanErr = fmt.Errorf("stderr scanner error: %w", err)
@@ -201,29 +202,52 @@ func ExecuteCommandContext(ctx context.Context, log *logger.Logger, command stri
 		}
 	}()
 
-	// Wait for both goroutines to finish reading before calling cmd.Wait()
 	wg.Wait()
 
-	// Check for scanner errors
 	if scanErr != nil {
 		return nil, scanErr
 	}
 
-	if err := cmd.Wait(); err != nil {
-		// Check if context was cancelled or timed out
-		if ctx.Err() != nil {
-			return nil, fmt.Errorf("command cancelled: %w", ctx.Err())
-		}
-		if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() != 0 {
-			return nil, fmt.Errorf("command failed with exit code %d: %v", exitErr.ExitCode(), err)
-		}
-		return nil, fmt.Errorf("command failed: %v", err)
-	}
-
-	result := &CommandResult{
+	return &CommandResult{
 		Stdout: stdoutBuilder.String(),
 		Stderr: stderrBuilder.String(),
+	}, nil
+}
+
+// readStream reads from a stream and appends to the builder
+func readStream(r interface{ Read([]byte) (int, error) }, builder *strings.Builder, mu *sync.Mutex, verbose, isStderr bool) error {
+	scanner := bufio.NewScanner(r)
+
+	// Use larger buffer for long lines (1MB max)
+	buf := make([]byte, 0, 64*1024)
+	scanner.Buffer(buf, 1024*1024)
+
+	for scanner.Scan() {
+		line := scanner.Text()
+
+		if verbose {
+			if isStderr {
+				fmt.Println("STDERR:", line)
+			} else {
+				fmt.Println(line)
+			}
+		}
+
+		mu.Lock()
+		builder.WriteString(line + "\n")
+		mu.Unlock()
 	}
 
-	return result, nil
-} 
+	return scanner.Err()
+}
+
+// handleCommandError converts command errors to descriptive messages
+func handleCommandError(ctx context.Context, err error) error {
+	if ctx.Err() != nil {
+		return fmt.Errorf("command cancelled: %w", ctx.Err())
+	}
+	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() != 0 {
+		return fmt.Errorf("command failed with exit code %d: %v", exitErr.ExitCode(), err)
+	}
+	return fmt.Errorf("command failed: %v", err)
+}

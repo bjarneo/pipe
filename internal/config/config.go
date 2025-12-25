@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -78,148 +79,165 @@ func (i *arrayFlags) Set(value string) error {
 	return nil
 }
 
+// flagSet holds all CLI flags for parsing
+type flagSet struct {
+	buildArgs          arrayFlags
+	volumeFlags        arrayFlags
+	remoteCommandFlags arrayFlags
+	envFlags           arrayFlags
+	labelFlags         arrayFlags
+	extraHostFlags     arrayFlags
+	capAddFlags        arrayFlags
+	capDropFlags       arrayFlags
+	tmpfsFlags         arrayFlags
+	logOptFlags        arrayFlags
+	configFile         string
+	showHelp           bool
+	showVersion        bool
+}
+
 // Load loads configuration from command line flags and environment variables
 func Load() Config {
 	var config Config
-	var showHelp bool
-	var showVersion bool
-	var buildArgs arrayFlags
-	var volumeFlags arrayFlags
-	var remoteCommandFlags arrayFlags
-	var envFlags arrayFlags
-	var labelFlags arrayFlags
-	var extraHostFlags arrayFlags
-	var capAddFlags arrayFlags
-	var capDropFlags arrayFlags
-	var tmpfsFlags arrayFlags
-	var logOptFlags arrayFlags
-	var configFile string
+	var flags flagSet
 
-	// Initialize maps
-	config.BuildArgs = make(map[string]string)
-	config.Labels = make(map[string]string)
-	config.Env = make(map[string]string)
-	config.LogOpts = make(map[string]string)
-
-	// Define command line flags
-	flag.StringVar(&configFile, "config", "", "Path to config file (default: pipe.yaml or pipe.yml)")
-	flag.StringVar(&config.Host, "host", "", "Remote host to deploy to")
-	flag.StringVar(&config.User, "user", "", "SSH user for remote host")
-	flag.StringVar(&config.SSHPort, "ssh-port", "", "SSH port (default: 22)")
-	flag.StringVar(&config.Image, "image", "", "Docker image name")
-	flag.StringVar(&config.Dockerfile, "dockerfile", "", "Path to the Dockerfile")
-	flag.StringVar(&config.Tag, "tag", "", "Docker image tag")
-	flag.StringVar(&config.Platform, "platform", "", "Docker platform")
-	flag.StringVar(&config.SSHKey, "ssh-key", "", "Path to SSH key")
-	flag.StringVar(&config.ContainerName, "container-name", "", "Name for the container")
-	flag.StringVar(&config.ContainerPort, "container-port", "", "Container port")
-	flag.StringVar(&config.HostPort, "host-port", "", "Host port")
-	flag.StringVar(&config.EnvFile, "env-file", "", "Environment file")
-	flag.Var(&buildArgs, "build-arg", "Build argument in KEY=VALUE format (can be specified multiple times)")
-	flag.Var(&volumeFlags, "volume", "Volume mount in format 'host:container' (can be specified multiple times)")
-	flag.Var(&remoteCommandFlags, "remote-command", "Remote command to execute after deployment (can be specified multiple times)")
-	flag.StringVar(&config.Network, "network", "", "Docker network to connect to")
-	flag.StringVar(&config.CPUs, "cpus", "", "Number of CPUs (e.g., '0.5' or '2')")
-	flag.StringVar(&config.Memory, "memory", "", "Memory limit (e.g., '512m' or '2g')")
-
-	// Health check flags
-	flag.StringVar(&config.HealthCmd, "health-cmd", "", "Health check command")
-	flag.StringVar(&config.HealthInterval, "health-interval", "", "Health check interval (e.g., '30s')")
-	flag.StringVar(&config.HealthTimeout, "health-timeout", "", "Health check timeout (e.g., '10s')")
-	flag.IntVar(&config.HealthRetries, "health-retries", 0, "Health check retries")
-	flag.StringVar(&config.HealthStart, "health-start-period", "", "Health check start period (e.g., '5s')")
-
-	// Container runtime flags
-	flag.StringVar(&config.RestartPolicy, "restart", "", "Restart policy (no, always, on-failure, unless-stopped)")
-	flag.Var(&labelFlags, "label", "Container label in KEY=VALUE format (can be specified multiple times)")
-	flag.Var(&envFlags, "env", "Environment variable in KEY=VALUE format (can be specified multiple times)")
-	flag.StringVar(&config.Entrypoint, "entrypoint", "", "Override container entrypoint")
-	flag.StringVar(&config.Command, "command", "", "Override container command")
-	flag.StringVar(&config.ContainerUser, "container-user", "", "User to run container as (user or user:group)")
-	flag.StringVar(&config.Workdir, "workdir", "", "Working directory inside container")
-	flag.StringVar(&config.Hostname, "hostname", "", "Container hostname")
-	flag.Var(&extraHostFlags, "add-host", "Add host-to-IP mapping (host:ip)")
-	flag.BoolVar(&config.Privileged, "privileged", false, "Run container in privileged mode")
-	flag.BoolVar(&config.Init, "init", false, "Run init inside container")
-	flag.BoolVar(&config.ReadOnly, "read-only", false, "Mount root filesystem as read-only")
-	flag.Var(&capAddFlags, "cap-add", "Add Linux capability")
-	flag.Var(&capDropFlags, "cap-drop", "Drop Linux capability")
-	flag.Var(&tmpfsFlags, "tmpfs", "Mount tmpfs (path or path:opts)")
-	flag.StringVar(&config.LogDriver, "log-driver", "", "Logging driver (e.g., json-file, syslog, none)")
-	flag.Var(&logOptFlags, "log-opt", "Log driver options in KEY=VALUE format")
-
-	// Execution flags
-	flag.BoolVar(&config.DryRun, "dry-run", false, "Preview deployment without executing")
-	flag.BoolVar(&config.Verbose, "verbose", false, "Show detailed output")
-	flag.BoolVar(&config.Verbose, "v", false, "Show detailed output (shorthand)")
-	flag.BoolVar(&config.JSONOutput, "json", false, "Output deployment stats as JSON")
-	flag.BoolVar(&showHelp, "help", false, "Show help message")
-	flag.BoolVar(&config.Rollback, "rollback", false, "Rollback to previous version")
-	flag.BoolVar(&showVersion, "version", false, "Show version information")
-
-	// Custom usage message
-	flag.Usage = func() {
-		fmt.Print(helpText)
-	}
-
-	// Parse command line flags
+	initMaps(&config)
+	defineFlags(&config, &flags)
 	flag.Parse()
 
-	// Show help if requested
-	if showHelp {
-		flag.Usage()
-		os.Exit(0)
-	}
+	handleHelpAndVersion(flags)
 
-	if showVersion {
-		fmt.Printf("pipe version %s\n", version)
-		os.Exit(0)
-	}
-
-	// Load config file first (lowest priority)
-	fileConfig := loadConfigFile(configFile)
-
-	// Merge: config file -> env vars -> CLI flags (CLI has highest priority)
-	config = mergeConfig(fileConfig, config, buildArgs, volumeFlags, remoteCommandFlags,
-		envFlags, labelFlags, extraHostFlags, capAddFlags, capDropFlags, tmpfsFlags, logOptFlags)
-
-	// Expand home directory in SSH key path
-	if strings.HasPrefix(config.SSHKey, "~/") {
-		home, err := os.UserHomeDir()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Warning: failed to expand ~ in SSH key path: %v\n", err)
-			fmt.Fprintf(os.Stderr, "SSH key path '%s' may not work correctly\n", config.SSHKey)
-		} else {
-			config.SSHKey = filepath.Join(home, config.SSHKey[2:])
-		}
-	}
+	fileConfig := loadConfigFile(flags.configFile)
+	config = mergeConfig(fileConfig, config, flags)
+	config.SSHKey = expandHomePath(config.SSHKey)
 
 	return config
 }
 
-// Validation patterns - these prevent shell injection by ensuring no dangerous characters
+// initMaps initializes all map fields to prevent nil map assignments
+func initMaps(cfg *Config) {
+	cfg.BuildArgs = make(map[string]string)
+	cfg.Labels = make(map[string]string)
+	cfg.Env = make(map[string]string)
+	cfg.LogOpts = make(map[string]string)
+}
+
+// defineFlags sets up all command line flags
+func defineFlags(cfg *Config, flags *flagSet) {
+	// Config file
+	flag.StringVar(&flags.configFile, "config", "", "Path to config file (default: pipe.yaml or pipe.yml)")
+
+	// Core options
+	flag.StringVar(&cfg.Host, "host", "", "Remote host to deploy to")
+	flag.StringVar(&cfg.User, "user", "", "SSH user for remote host")
+	flag.StringVar(&cfg.SSHPort, "ssh-port", "", "SSH port (default: 22)")
+	flag.StringVar(&cfg.SSHKey, "ssh-key", "", "Path to SSH key")
+
+	// Image options
+	flag.StringVar(&cfg.Image, "image", "", "Docker image name")
+	flag.StringVar(&cfg.Dockerfile, "dockerfile", "", "Path to the Dockerfile")
+	flag.StringVar(&cfg.Tag, "tag", "", "Docker image tag")
+	flag.StringVar(&cfg.Platform, "platform", "", "Docker platform")
+	flag.Var(&flags.buildArgs, "build-arg", "Build argument in KEY=VALUE format (can be specified multiple times)")
+
+	// Container options
+	flag.StringVar(&cfg.ContainerName, "container-name", "", "Name for the container")
+	flag.StringVar(&cfg.ContainerPort, "container-port", "", "Container port")
+	flag.StringVar(&cfg.HostPort, "host-port", "", "Host port")
+	flag.StringVar(&cfg.EnvFile, "env-file", "", "Environment file")
+	flag.Var(&flags.volumeFlags, "volume", "Volume mount in format 'host:container' (can be specified multiple times)")
+	flag.Var(&flags.remoteCommandFlags, "remote-command", "Remote command to execute after deployment (can be specified multiple times)")
+	flag.StringVar(&cfg.Network, "network", "", "Docker network to connect to")
+
+	// Resource limits
+	flag.StringVar(&cfg.CPUs, "cpus", "", "Number of CPUs (e.g., '0.5' or '2')")
+	flag.StringVar(&cfg.Memory, "memory", "", "Memory limit (e.g., '512m' or '2g')")
+
+	// Health check flags
+	flag.StringVar(&cfg.HealthCmd, "health-cmd", "", "Health check command")
+	flag.StringVar(&cfg.HealthInterval, "health-interval", "", "Health check interval (e.g., '30s')")
+	flag.StringVar(&cfg.HealthTimeout, "health-timeout", "", "Health check timeout (e.g., '10s')")
+	flag.IntVar(&cfg.HealthRetries, "health-retries", 0, "Health check retries")
+	flag.StringVar(&cfg.HealthStart, "health-start-period", "", "Health check start period (e.g., '5s')")
+
+	// Container runtime flags
+	flag.StringVar(&cfg.RestartPolicy, "restart", "", "Restart policy (no, always, on-failure, unless-stopped)")
+	flag.Var(&flags.labelFlags, "label", "Container label in KEY=VALUE format (can be specified multiple times)")
+	flag.Var(&flags.envFlags, "env", "Environment variable in KEY=VALUE format (can be specified multiple times)")
+	flag.StringVar(&cfg.Entrypoint, "entrypoint", "", "Override container entrypoint")
+	flag.StringVar(&cfg.Command, "command", "", "Override container command")
+	flag.StringVar(&cfg.ContainerUser, "container-user", "", "User to run container as (user or user:group)")
+	flag.StringVar(&cfg.Workdir, "workdir", "", "Working directory inside container")
+	flag.StringVar(&cfg.Hostname, "hostname", "", "Container hostname")
+	flag.Var(&flags.extraHostFlags, "add-host", "Add host-to-IP mapping (host:ip)")
+
+	// Security flags
+	flag.BoolVar(&cfg.Privileged, "privileged", false, "Run container in privileged mode")
+	flag.BoolVar(&cfg.Init, "init", false, "Run init inside container")
+	flag.BoolVar(&cfg.ReadOnly, "read-only", false, "Mount root filesystem as read-only")
+	flag.Var(&flags.capAddFlags, "cap-add", "Add Linux capability")
+	flag.Var(&flags.capDropFlags, "cap-drop", "Drop Linux capability")
+
+	// Storage flags
+	flag.Var(&flags.tmpfsFlags, "tmpfs", "Mount tmpfs (path or path:opts)")
+
+	// Logging flags
+	flag.StringVar(&cfg.LogDriver, "log-driver", "", "Logging driver (e.g., json-file, syslog, none)")
+	flag.Var(&flags.logOptFlags, "log-opt", "Log driver options in KEY=VALUE format")
+
+	// Execution flags
+	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Preview deployment without executing")
+	flag.BoolVar(&cfg.Verbose, "verbose", false, "Show detailed output")
+	flag.BoolVar(&cfg.Verbose, "v", false, "Show detailed output (shorthand)")
+	flag.BoolVar(&cfg.JSONOutput, "json", false, "Output deployment stats as JSON")
+	flag.BoolVar(&flags.showHelp, "help", false, "Show help message")
+	flag.BoolVar(&cfg.Rollback, "rollback", false, "Rollback to previous version")
+	flag.BoolVar(&flags.showVersion, "version", false, "Show version information")
+
+	flag.Usage = func() { fmt.Print(helpText) }
+}
+
+// handleHelpAndVersion exits if help or version flags are set
+func handleHelpAndVersion(flags flagSet) {
+	if flags.showHelp {
+		flag.Usage()
+		os.Exit(0)
+	}
+	if flags.showVersion {
+		fmt.Printf("pipe version %s\n", version)
+		os.Exit(0)
+	}
+}
+
+// expandHomePath expands ~ to home directory in paths
+func expandHomePath(path string) string {
+	if !strings.HasPrefix(path, "~/") {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Warning: failed to expand ~ in path: %v\n", err)
+		return path
+	}
+	return filepath.Join(home, path[2:])
+}
+
+// =============================================================================
+// Validation
+// =============================================================================
+
+// Validation patterns - prevent shell injection with strict regexes
 var (
-	// Hostname: alphanumeric, dots, hyphens (RFC 1123)
-	hostnameRegex = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$`)
-	// IP address pattern
-	ipRegex = regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
-	// Unix username: starts with letter or underscore, alphanumeric/underscore/hyphen
-	usernameRegex = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
-	// Docker image name: lowercase alphanumeric, can include slashes, dots, hyphens, underscores
-	imageNameRegex = regexp.MustCompile(`^[a-z0-9][a-z0-9._/-]*$`)
-	// Docker tag: alphanumeric, dots, hyphens, underscores
-	tagRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
-	// Container name: alphanumeric, underscores, hyphens
+	hostnameRegex      = regexp.MustCompile(`^[a-zA-Z0-9]([a-zA-Z0-9\-\.]*[a-zA-Z0-9])?$`)
+	ipRegex            = regexp.MustCompile(`^(\d{1,3}\.){3}\d{1,3}$`)
+	usernameRegex      = regexp.MustCompile(`^[a-z_][a-z0-9_-]*$`)
+	imageNameRegex     = regexp.MustCompile(`^[a-z0-9][a-z0-9._/-]*$`)
+	tagRegex           = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9._-]*$`)
 	containerNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
-	// Network name: alphanumeric, underscores, hyphens
-	networkNameRegex = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
-	// Build arg key: uppercase alphanumeric and underscores
-	buildArgKeyRegex = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
-	// CPU format: decimal number
-	cpuRegex = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
-	// Memory format: number followed by optional unit
-	memoryRegex = regexp.MustCompile(`^[0-9]+[bkmgBKMG]?$`)
-	// Dangerous shell characters that should never appear in unquoted input
+	networkNameRegex   = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_.-]*$`)
+	buildArgKeyRegex   = regexp.MustCompile(`^[a-zA-Z_][a-zA-Z0-9_]*$`)
+	cpuRegex           = regexp.MustCompile(`^[0-9]+(\.[0-9]+)?$`)
+	memoryRegex        = regexp.MustCompile(`^[0-9]+[bkmgBKMG]?$`)
 	dangerousCharsRegex = regexp.MustCompile(`[;&|$` + "`" + `\\\n\r"'<>(){}]`)
 )
 
@@ -234,177 +252,185 @@ var validPlatforms = map[string]bool{
 	"linux/s390x":   true,
 }
 
-// Validate validates the configuration and returns an error if any field is invalid
-// This is critical for preventing command injection attacks
+// Validate validates the configuration and returns an error if any field is invalid.
+// This is critical for preventing command injection attacks.
 func (c *Config) Validate() error {
-	var errors []string
+	var errs []string
 
-	// Required fields
+	errs = append(errs, c.validateRequired()...)
+	errs = append(errs, c.validateFormats()...)
+	errs = append(errs, c.validatePaths()...)
+	errs = append(errs, c.validateMaps()...)
+	errs = append(errs, c.validateSlices()...)
+	errs = append(errs, c.validateRemoteCommands()...)
+
+	if len(errs) > 0 {
+		return fmt.Errorf("configuration validation failed:\n  - %s", strings.Join(errs, "\n  - "))
+	}
+	return nil
+}
+
+// validateRequired checks required fields are present and valid
+func (c *Config) validateRequired() []string {
+	var errs []string
+
 	if c.Host == "" {
-		errors = append(errors, "host is required")
+		errs = append(errs, "host is required")
 	} else if !hostnameRegex.MatchString(c.Host) && !ipRegex.MatchString(c.Host) {
-		errors = append(errors, "host must be a valid hostname or IP address")
+		errs = append(errs, "host must be a valid hostname or IP address")
 	}
 
 	if c.User == "" {
-		errors = append(errors, "user is required")
+		errs = append(errs, "user is required")
 	} else if !usernameRegex.MatchString(c.User) {
-		errors = append(errors, "user must be a valid Unix username (lowercase, starts with letter/underscore)")
+		errs = append(errs, "user must be a valid Unix username (lowercase, starts with letter/underscore)")
 	}
 
-	// Image validation
+	return errs
+}
+
+// validateFormats checks format constraints on optional fields
+func (c *Config) validateFormats() []string {
+	var errs []string
+
 	if c.Image != "" && !imageNameRegex.MatchString(c.Image) {
-		errors = append(errors, "image name contains invalid characters")
+		errs = append(errs, "image name contains invalid characters")
 	}
-
-	// Tag validation
 	if c.Tag != "" && !tagRegex.MatchString(c.Tag) {
-		errors = append(errors, "tag contains invalid characters")
+		errs = append(errs, "tag contains invalid characters")
 	}
-
-	// Container name validation
 	if c.ContainerName != "" && !containerNameRegex.MatchString(c.ContainerName) {
-		errors = append(errors, "container-name contains invalid characters")
+		errs = append(errs, "container-name contains invalid characters")
 	}
-
-	// Platform validation (whitelist)
 	if c.Platform != "" && !validPlatforms[c.Platform] {
-		errors = append(errors, fmt.Sprintf("platform must be one of: linux/amd64, linux/arm64, linux/arm/v7, linux/arm/v6, linux/386"))
+		errs = append(errs, "platform must be one of: linux/amd64, linux/arm64, linux/arm/v7, linux/arm/v6, linux/386")
 	}
-
-	// Port validation
-	if c.ContainerPort != "" {
-		if port, err := strconv.Atoi(c.ContainerPort); err != nil || port < 1 || port > 65535 {
-			errors = append(errors, "container-port must be a valid port number (1-65535)")
-		}
-	}
-
-	if c.HostPort != "" {
-		if port, err := strconv.Atoi(c.HostPort); err != nil || port < 1 || port > 65535 {
-			errors = append(errors, "host-port must be a valid port number (1-65535)")
-		}
-	}
-
-	// Network validation
 	if c.Network != "" && !networkNameRegex.MatchString(c.Network) {
-		errors = append(errors, "network name contains invalid characters")
+		errs = append(errs, "network name contains invalid characters")
 	}
-
-	// CPU validation
 	if c.CPUs != "" && !cpuRegex.MatchString(c.CPUs) {
-		errors = append(errors, "cpus must be a valid number (e.g., '0.5' or '2')")
+		errs = append(errs, "cpus must be a valid number (e.g., '0.5' or '2')")
 	}
-
-	// Memory validation
 	if c.Memory != "" && !memoryRegex.MatchString(c.Memory) {
-		errors = append(errors, "memory must be a valid format (e.g., '512m' or '2g')")
+		errs = append(errs, "memory must be a valid format (e.g., '512m' or '2g')")
 	}
 
-	// Build args validation - check for shell injection
+	errs = append(errs, validatePort(c.ContainerPort, "container-port")...)
+	errs = append(errs, validatePort(c.HostPort, "host-port")...)
+
+	return errs
+}
+
+// validatePort validates a port number string
+func validatePort(port, name string) []string {
+	if port == "" {
+		return nil
+	}
+	if p, err := strconv.Atoi(port); err != nil || p < 1 || p > 65535 {
+		return []string{fmt.Sprintf("%s must be a valid port number (1-65535)", name)}
+	}
+	return nil
+}
+
+// validatePaths checks file paths for security issues
+func (c *Config) validatePaths() []string {
+	var errs []string
+
+	if c.EnvFile != "" {
+		if strings.Contains(c.EnvFile, "..") {
+			errs = append(errs, "env-file path contains path traversal sequence")
+		}
+		if filepath.IsAbs(c.EnvFile) {
+			errs = append(errs, "env-file must be a relative path")
+		}
+		if dangerousCharsRegex.MatchString(c.EnvFile) {
+			errs = append(errs, "env-file path contains dangerous shell characters")
+		}
+	}
+
+	if c.Dockerfile != "" {
+		if strings.Contains(c.Dockerfile, "..") {
+			errs = append(errs, "dockerfile path contains path traversal sequence")
+		}
+		if dangerousCharsRegex.MatchString(c.Dockerfile) {
+			errs = append(errs, "dockerfile path contains dangerous shell characters")
+		}
+	}
+
+	if c.SSHKey != "" && dangerousCharsRegex.MatchString(c.SSHKey) {
+		errs = append(errs, "ssh-key path contains dangerous shell characters")
+	}
+
+	return errs
+}
+
+// validateMaps checks map fields for shell injection
+func (c *Config) validateMaps() []string {
+	var errs []string
+
 	for key, value := range c.BuildArgs {
 		if !buildArgKeyRegex.MatchString(key) {
-			errors = append(errors, fmt.Sprintf("build-arg key '%s' contains invalid characters", key))
+			errs = append(errs, fmt.Sprintf("build-arg key '%s' contains invalid characters", key))
 		}
 		if dangerousCharsRegex.MatchString(value) {
-			errors = append(errors, fmt.Sprintf("build-arg value for '%s' contains dangerous shell characters", key))
+			errs = append(errs, fmt.Sprintf("build-arg value for '%s' contains dangerous shell characters", key))
 		}
 	}
 
-	// Volume validation
+	return errs
+}
+
+// validateSlices checks slice fields for security issues
+func (c *Config) validateSlices() []string {
+	var errs []string
+
 	for _, vol := range c.Volumes {
 		if vol == "" {
 			continue
 		}
 		if !strings.Contains(vol, ":") {
-			errors = append(errors, fmt.Sprintf("volume '%s' must be in format 'host:container'", vol))
+			errs = append(errs, fmt.Sprintf("volume '%s' must be in format 'host:container'", vol))
 		}
 		if dangerousCharsRegex.MatchString(vol) {
-			errors = append(errors, fmt.Sprintf("volume '%s' contains dangerous shell characters", vol))
+			errs = append(errs, fmt.Sprintf("volume '%s' contains dangerous shell characters", vol))
 		}
-		// Check for path traversal
 		if strings.Contains(vol, "..") {
-			errors = append(errors, fmt.Sprintf("volume '%s' contains path traversal sequence", vol))
+			errs = append(errs, fmt.Sprintf("volume '%s' contains path traversal sequence", vol))
 		}
 	}
 
-	// Env file validation - check for path traversal
-	if c.EnvFile != "" {
-		if strings.Contains(c.EnvFile, "..") {
-			errors = append(errors, "env-file path contains path traversal sequence")
-		}
-		if filepath.IsAbs(c.EnvFile) {
-			errors = append(errors, "env-file must be a relative path")
-		}
-		if dangerousCharsRegex.MatchString(c.EnvFile) {
-			errors = append(errors, "env-file path contains dangerous shell characters")
-		}
-	}
+	return errs
+}
 
-	// Dockerfile validation - check for path traversal
-	if c.Dockerfile != "" {
-		if strings.Contains(c.Dockerfile, "..") {
-			errors = append(errors, "dockerfile path contains path traversal sequence")
-		}
-		if dangerousCharsRegex.MatchString(c.Dockerfile) {
-			errors = append(errors, "dockerfile path contains dangerous shell characters")
-		}
-	}
+// validateRemoteCommands checks remote commands for dangerous patterns
+func (c *Config) validateRemoteCommands() []string {
+	var errs []string
+	dangerousPatterns := []string{"rm -rf /", "mkfs", "dd if=", "> /dev/"}
 
-	// SSH key path validation
-	if c.SSHKey != "" {
-		if dangerousCharsRegex.MatchString(c.SSHKey) {
-			errors = append(errors, "ssh-key path contains dangerous shell characters")
-		}
-	}
-
-	// Remote commands validation
 	for i, cmd := range c.RemoteCommands {
 		if cmd == "" {
 			continue
 		}
-		// Check for extremely dangerous patterns that could compromise the host
-		dangerousPatterns := []string{"rm -rf /", "mkfs", "dd if=", "> /dev/"}
 		for _, pattern := range dangerousPatterns {
 			if strings.Contains(cmd, pattern) {
-				errors = append(errors, fmt.Sprintf("remote-command[%d] contains dangerous pattern '%s'", i, pattern))
+				errs = append(errs, fmt.Sprintf("remote-command[%d] contains dangerous pattern '%s'", i, pattern))
 			}
 		}
 	}
 
-	if len(errors) > 0 {
-		return fmt.Errorf("configuration validation failed:\n  - %s", strings.Join(errors, "\n  - "))
-	}
-
-	return nil
+	return errs
 }
 
-// getEnv gets an environment variable with a default value
-func getEnv(key, defaultValue string) string {
-	if value, exists := os.LookupEnv(key); exists {
-		return value
-	}
-	return defaultValue
-}
+// =============================================================================
+// Configuration Loading
+// =============================================================================
 
 // loadConfigFile loads configuration from a YAML file
 func loadConfigFile(configPath string) Config {
 	var config Config
-	config.BuildArgs = make(map[string]string)
-	config.Labels = make(map[string]string)
-	config.Env = make(map[string]string)
-	config.LogOpts = make(map[string]string)
+	initMaps(&config)
 
-	// Determine which config file to use
-	if configPath == "" {
-		// Try default config file names
-		for _, name := range []string{"pipe.yaml", "pipe.yml"} {
-			if _, err := os.Stat(name); err == nil {
-				configPath = name
-				break
-			}
-		}
-	}
-
+	configPath = findConfigFile(configPath)
 	if configPath == "" {
 		return config
 	}
@@ -420,14 +446,25 @@ func loadConfigFile(configPath string) Config {
 		return config
 	}
 
-	// Expand environment variables in config values
-	config = expandEnvVars(config)
-
+	expandEnvVars(&config)
 	return config
 }
 
-// expandEnvVars expands environment variables in config string values
-func expandEnvVars(config Config) Config {
+// findConfigFile returns the config file path, checking defaults if needed
+func findConfigFile(path string) string {
+	if path != "" {
+		return path
+	}
+	for _, name := range []string{"pipe.yaml", "pipe.yml"} {
+		if _, err := os.Stat(name); err == nil {
+			return name
+		}
+	}
+	return ""
+}
+
+// expandEnvVars expands environment variables in all string fields using reflection
+func expandEnvVars(cfg *Config) {
 	expand := func(s string) string {
 		return os.Expand(s, func(key string) string {
 			if val, exists := os.LookupEnv(key); exists {
@@ -437,255 +474,261 @@ func expandEnvVars(config Config) Config {
 		})
 	}
 
-	config.Host = expand(config.Host)
-	config.User = expand(config.User)
-	config.Image = expand(config.Image)
-	config.Dockerfile = expand(config.Dockerfile)
-	config.Tag = expand(config.Tag)
-	config.Platform = expand(config.Platform)
-	config.SSHKey = expand(config.SSHKey)
-	config.SSHPort = expand(config.SSHPort)
-	config.ContainerName = expand(config.ContainerName)
-	config.ContainerPort = expand(config.ContainerPort)
-	config.HostPort = expand(config.HostPort)
-	config.EnvFile = expand(config.EnvFile)
-	config.Network = expand(config.Network)
-	config.CPUs = expand(config.CPUs)
-	config.Memory = expand(config.Memory)
+	v := reflect.ValueOf(cfg).Elem()
+	t := v.Type()
 
-	// Health check
-	config.HealthCmd = expand(config.HealthCmd)
-	config.HealthInterval = expand(config.HealthInterval)
-	config.HealthTimeout = expand(config.HealthTimeout)
-	config.HealthStart = expand(config.HealthStart)
+	for i := 0; i < v.NumField(); i++ {
+		field := v.Field(i)
+		if !field.CanSet() {
+			continue
+		}
 
-	// Container runtime
-	config.RestartPolicy = expand(config.RestartPolicy)
-	config.Entrypoint = expand(config.Entrypoint)
-	config.Command = expand(config.Command)
-	config.ContainerUser = expand(config.ContainerUser)
-	config.Workdir = expand(config.Workdir)
-	config.Hostname = expand(config.Hostname)
-	config.LogDriver = expand(config.LogDriver)
+		switch field.Kind() {
+		case reflect.String:
+			field.SetString(expand(field.String()))
 
-	// Expand build args
-	for key, value := range config.BuildArgs {
-		config.BuildArgs[key] = expand(value)
+		case reflect.Slice:
+			if field.Type().Elem().Kind() == reflect.String {
+				for j := 0; j < field.Len(); j++ {
+					field.Index(j).SetString(expand(field.Index(j).String()))
+				}
+			}
+
+		case reflect.Map:
+			if t.Field(i).Type.Key().Kind() == reflect.String &&
+				t.Field(i).Type.Elem().Kind() == reflect.String {
+				for _, key := range field.MapKeys() {
+					val := field.MapIndex(key).String()
+					field.SetMapIndex(key, reflect.ValueOf(expand(val)))
+				}
+			}
+		}
 	}
+}
 
-	// Expand labels
-	for key, value := range config.Labels {
-		config.Labels[key] = expand(value)
-	}
+// =============================================================================
+// Configuration Merging
+// =============================================================================
 
-	// Expand env
-	for key, value := range config.Env {
-		config.Env[key] = expand(value)
-	}
+// envMapping defines environment variable to config field mappings
+var envMapping = map[string]string{
+	"Host":           "HOST",
+	"User":           "HOST_USER",
+	"SSHPort":        "SSH_PORT",
+	"Image":          "DOCKER_IMAGE_NAME",
+	"Dockerfile":     "DOCKERFILE",
+	"Tag":            "DOCKER_IMAGE_TAG",
+	"Platform":       "HOST_PLATFORM",
+	"SSHKey":         "SSH_KEY_PATH",
+	"ContainerName":  "DOCKER_CONTAINER_NAME",
+	"ContainerPort":  "DOCKER_CONTAINER_PORT",
+	"HostPort":       "HOST_PORT",
+	"EnvFile":        "DOCKER_CONTAINER_ENV_FILE",
+	"Network":        "DOCKER_NETWORK",
+	"CPUs":           "DOCKER_CPUS",
+	"Memory":         "DOCKER_MEMORY",
+	"HealthCmd":      "HEALTH_CMD",
+	"HealthInterval": "HEALTH_INTERVAL",
+	"HealthTimeout":  "HEALTH_TIMEOUT",
+	"HealthStart":    "HEALTH_START_PERIOD",
+	"RestartPolicy":  "RESTART_POLICY",
+	"ContainerUser":  "CONTAINER_USER",
+	"Workdir":        "WORKDIR",
+	"Hostname":       "CONTAINER_HOSTNAME",
+	"LogDriver":      "LOG_DRIVER",
+}
 
-	// Expand log opts
-	for key, value := range config.LogOpts {
-		config.LogOpts[key] = expand(value)
-	}
-
-	// Expand volumes
-	for i, vol := range config.Volumes {
-		config.Volumes[i] = expand(vol)
-	}
-
-	// Expand remote commands
-	for i, cmd := range config.RemoteCommands {
-		config.RemoteCommands[i] = expand(cmd)
-	}
-
-	// Expand extra hosts
-	for i, host := range config.ExtraHosts {
-		config.ExtraHosts[i] = expand(host)
-	}
-
-	// Expand tmpfs
-	for i, t := range config.Tmpfs {
-		config.Tmpfs[i] = expand(t)
-	}
-
-	return config
+// defaultValues defines default values for config fields
+var defaultValues = map[string]string{
+	"SSHPort":       "22",
+	"Image":         "app",
+	"Dockerfile":    "Dockerfile",
+	"Tag":           "latest",
+	"Platform":      "linux/amd64",
+	"ContainerName": "app",
+	"ContainerPort": "3000",
+	"HostPort":      "3000",
+	"RestartPolicy": "unless-stopped",
 }
 
 // mergeConfig merges configuration from file, environment variables, and CLI flags
 // Priority: CLI flags > env vars > config file > defaults
-func mergeConfig(fileConfig, cliConfig Config, buildArgs, volumeFlags, remoteCommandFlags,
-	envFlags, labelFlags, extraHostFlags, capAddFlags, capDropFlags, tmpfsFlags, logOptFlags arrayFlags) Config {
+func mergeConfig(fileConfig, cliConfig Config, flags flagSet) Config {
 	result := fileConfig
 
-	// Helper to get value with priority: CLI > env > file > default
-	getString := func(cliVal, envKey, fileVal, defaultVal string) string {
-		if cliVal != "" {
-			return cliVal
-		}
-		if envKey != "" {
-			if envVal := os.Getenv(envKey); envVal != "" {
-				return envVal
-			}
-		}
-		if fileVal != "" {
-			return fileVal
-		}
-		return defaultVal
-	}
+	// Merge string fields using reflection
+	mergeStringFields(&result, &cliConfig)
 
-	getInt := func(cliVal int, envKey string, fileVal int, defaultVal int) int {
-		if cliVal != 0 {
-			return cliVal
-		}
-		if envKey != "" {
-			if envVal := os.Getenv(envKey); envVal != "" {
-				if v, err := strconv.Atoi(envVal); err == nil {
-					return v
-				}
-			}
-		}
-		if fileVal != 0 {
-			return fileVal
-		}
-		return defaultVal
-	}
+	// Merge int fields
+	result.HealthRetries = mergeInt(cliConfig.HealthRetries, "HEALTH_RETRIES", fileConfig.HealthRetries, 0)
 
-	getBool := func(cliVal bool, envKey string, fileVal bool) bool {
-		if cliVal {
-			return true
-		}
-		if envKey != "" {
-			if envVal := os.Getenv(envKey); envVal != "" {
-				return envVal == "true" || envVal == "1" || envVal == "yes"
-			}
-		}
-		return fileVal
-	}
-
-	result.Host = getString(cliConfig.Host, "HOST", fileConfig.Host, "")
-	result.User = getString(cliConfig.User, "HOST_USER", fileConfig.User, "")
-	result.SSHPort = getString(cliConfig.SSHPort, "SSH_PORT", fileConfig.SSHPort, "22")
-	result.Image = getString(cliConfig.Image, "DOCKER_IMAGE_NAME", fileConfig.Image, "app")
-	result.Dockerfile = getString(cliConfig.Dockerfile, "DOCKERFILE", fileConfig.Dockerfile, "Dockerfile")
-	result.Tag = getString(cliConfig.Tag, "DOCKER_IMAGE_TAG", fileConfig.Tag, "latest")
-	result.Platform = getString(cliConfig.Platform, "HOST_PLATFORM", fileConfig.Platform, "linux/amd64")
-	result.SSHKey = getString(cliConfig.SSHKey, "SSH_KEY_PATH", fileConfig.SSHKey, "")
-	result.ContainerName = getString(cliConfig.ContainerName, "DOCKER_CONTAINER_NAME", fileConfig.ContainerName, "app")
-	result.ContainerPort = getString(cliConfig.ContainerPort, "DOCKER_CONTAINER_PORT", fileConfig.ContainerPort, "3000")
-	result.HostPort = getString(cliConfig.HostPort, "HOST_PORT", fileConfig.HostPort, "3000")
-	result.EnvFile = getString(cliConfig.EnvFile, "DOCKER_CONTAINER_ENV_FILE", fileConfig.EnvFile, "")
-	result.Network = getString(cliConfig.Network, "DOCKER_NETWORK", fileConfig.Network, "")
-	result.CPUs = getString(cliConfig.CPUs, "DOCKER_CPUS", fileConfig.CPUs, "")
-	result.Memory = getString(cliConfig.Memory, "DOCKER_MEMORY", fileConfig.Memory, "")
-
-	// Health check options
-	result.HealthCmd = getString(cliConfig.HealthCmd, "HEALTH_CMD", fileConfig.HealthCmd, "")
-	result.HealthInterval = getString(cliConfig.HealthInterval, "HEALTH_INTERVAL", fileConfig.HealthInterval, "")
-	result.HealthTimeout = getString(cliConfig.HealthTimeout, "HEALTH_TIMEOUT", fileConfig.HealthTimeout, "")
-	result.HealthRetries = getInt(cliConfig.HealthRetries, "HEALTH_RETRIES", fileConfig.HealthRetries, 0)
-	result.HealthStart = getString(cliConfig.HealthStart, "HEALTH_START_PERIOD", fileConfig.HealthStart, "")
-
-	// Container runtime options
-	result.RestartPolicy = getString(cliConfig.RestartPolicy, "RESTART_POLICY", fileConfig.RestartPolicy, "unless-stopped")
-	result.Entrypoint = getString(cliConfig.Entrypoint, "", fileConfig.Entrypoint, "")
-	result.Command = getString(cliConfig.Command, "", fileConfig.Command, "")
-	result.ContainerUser = getString(cliConfig.ContainerUser, "CONTAINER_USER", fileConfig.ContainerUser, "")
-	result.Workdir = getString(cliConfig.Workdir, "WORKDIR", fileConfig.Workdir, "")
-	result.Hostname = getString(cliConfig.Hostname, "CONTAINER_HOSTNAME", fileConfig.Hostname, "")
-	result.LogDriver = getString(cliConfig.LogDriver, "LOG_DRIVER", fileConfig.LogDriver, "")
-
-	// Boolean options
-	result.Privileged = getBool(cliConfig.Privileged, "PRIVILEGED", fileConfig.Privileged)
-	result.Init = getBool(cliConfig.Init, "INIT", fileConfig.Init)
-	result.ReadOnly = getBool(cliConfig.ReadOnly, "READ_ONLY", fileConfig.ReadOnly)
-	result.DryRun = getBool(cliConfig.DryRun, "DRY_RUN", fileConfig.DryRun)
-	result.Verbose = getBool(cliConfig.Verbose, "VERBOSE", fileConfig.Verbose)
-	result.JSONOutput = getBool(cliConfig.JSONOutput, "JSON_OUTPUT", fileConfig.JSONOutput)
+	// Merge bool fields
+	result.Privileged = mergeBool(cliConfig.Privileged, "PRIVILEGED", fileConfig.Privileged)
+	result.Init = mergeBool(cliConfig.Init, "INIT", fileConfig.Init)
+	result.ReadOnly = mergeBool(cliConfig.ReadOnly, "READ_ONLY", fileConfig.ReadOnly)
+	result.DryRun = mergeBool(cliConfig.DryRun, "DRY_RUN", fileConfig.DryRun)
+	result.Verbose = mergeBool(cliConfig.Verbose, "VERBOSE", fileConfig.Verbose)
+	result.JSONOutput = mergeBool(cliConfig.JSONOutput, "JSON_OUTPUT", fileConfig.JSONOutput)
 	result.Rollback = cliConfig.Rollback
 
-	// Merge build args: file < env < CLI
-	if result.BuildArgs == nil {
-		result.BuildArgs = make(map[string]string)
+	// Merge maps
+	mergeMaps(&result, flags)
+
+	// Merge slices
+	mergeSlices(&result, flags)
+
+	return result
+}
+
+// mergeStringFields merges all string fields based on priority
+func mergeStringFields(result, cliConfig *Config) {
+	rv := reflect.ValueOf(result).Elem()
+	cv := reflect.ValueOf(cliConfig).Elem()
+	t := rv.Type()
+
+	for i := 0; i < rv.NumField(); i++ {
+		field := t.Field(i)
+		if field.Type.Kind() != reflect.String {
+			continue
+		}
+
+		fieldName := field.Name
+		resultField := rv.Field(i)
+		cliField := cv.Field(i)
+
+		cliVal := cliField.String()
+		fileVal := resultField.String()
+		envKey := envMapping[fieldName]
+		defaultVal := defaultValues[fieldName]
+
+		resultField.SetString(mergeString(cliVal, envKey, fileVal, defaultVal))
 	}
-	if envBuildArgs := os.Getenv("DOCKER_BUILD_ARGS"); envBuildArgs != "" {
-		for _, arg := range strings.Split(envBuildArgs, ",") {
-			parts := strings.SplitN(arg, "=", 2)
-			if len(parts) == 2 {
-				result.BuildArgs[parts[0]] = parts[1]
+}
+
+// mergeString returns the value with highest priority
+func mergeString(cliVal, envKey, fileVal, defaultVal string) string {
+	if cliVal != "" {
+		return cliVal
+	}
+	if envKey != "" {
+		if envVal := os.Getenv(envKey); envVal != "" {
+			return envVal
+		}
+	}
+	if fileVal != "" {
+		return fileVal
+	}
+	return defaultVal
+}
+
+// mergeInt returns the value with highest priority
+func mergeInt(cliVal int, envKey string, fileVal, defaultVal int) int {
+	if cliVal != 0 {
+		return cliVal
+	}
+	if envKey != "" {
+		if envVal := os.Getenv(envKey); envVal != "" {
+			if v, err := strconv.Atoi(envVal); err == nil {
+				return v
 			}
 		}
 	}
-	for _, arg := range buildArgs {
-		parts := strings.SplitN(arg, "=", 2)
-		if len(parts) == 2 {
-			result.BuildArgs[parts[0]] = parts[1]
+	if fileVal != 0 {
+		return fileVal
+	}
+	return defaultVal
+}
+
+// mergeBool returns the value with highest priority
+func mergeBool(cliVal bool, envKey string, fileVal bool) bool {
+	if cliVal {
+		return true
+	}
+	if envKey != "" {
+		if envVal := os.Getenv(envKey); envVal != "" {
+			return envVal == "true" || envVal == "1" || envVal == "yes"
 		}
 	}
+	return fileVal
+}
 
-	// Merge labels: file < CLI
-	if result.Labels == nil {
-		result.Labels = make(map[string]string)
-	}
-	for _, label := range labelFlags {
-		parts := strings.SplitN(label, "=", 2)
-		if len(parts) == 2 {
-			result.Labels[parts[0]] = parts[1]
-		}
-	}
+// mergeMaps merges map fields from various sources
+func mergeMaps(result *Config, flags flagSet) {
+	ensureMap(&result.BuildArgs)
+	ensureMap(&result.Labels)
+	ensureMap(&result.Env)
+	ensureMap(&result.LogOpts)
 
-	// Merge env: file < CLI
-	if result.Env == nil {
-		result.Env = make(map[string]string)
-	}
-	for _, env := range envFlags {
-		parts := strings.SplitN(env, "=", 2)
-		if len(parts) == 2 {
-			result.Env[parts[0]] = parts[1]
-		}
+	// Build args from env
+	if envBuildArgs := os.Getenv("DOCKER_BUILD_ARGS"); envBuildArgs != "" {
+		parseKeyValues(envBuildArgs, ",", result.BuildArgs)
 	}
 
-	// Merge log opts: file < CLI
-	if result.LogOpts == nil {
-		result.LogOpts = make(map[string]string)
-	}
-	for _, opt := range logOptFlags {
-		parts := strings.SplitN(opt, "=", 2)
-		if len(parts) == 2 {
-			result.LogOpts[parts[0]] = parts[1]
-		}
-	}
+	// CLI flags override
+	parseArrayFlags(flags.buildArgs, result.BuildArgs)
+	parseArrayFlags(flags.labelFlags, result.Labels)
+	parseArrayFlags(flags.envFlags, result.Env)
+	parseArrayFlags(flags.logOptFlags, result.LogOpts)
+}
 
-	// Merge slices: CLI > env > file
-	if len(volumeFlags) > 0 {
-		result.Volumes = []string(volumeFlags)
+// mergeSlices merges slice fields from CLI flags and env
+func mergeSlices(result *Config, flags flagSet) {
+	if len(flags.volumeFlags) > 0 {
+		result.Volumes = []string(flags.volumeFlags)
 	} else if envVolumes := os.Getenv("DOCKER_VOLUMES"); envVolumes != "" {
 		result.Volumes = strings.Split(envVolumes, ",")
 	}
 
-	if len(remoteCommandFlags) > 0 {
-		result.RemoteCommands = []string(remoteCommandFlags)
+	if len(flags.remoteCommandFlags) > 0 {
+		result.RemoteCommands = []string(flags.remoteCommandFlags)
 	} else if envRemoteCommands := os.Getenv("REMOTE_COMMANDS"); envRemoteCommands != "" {
 		result.RemoteCommands = strings.Split(envRemoteCommands, ",")
 	}
 
-	if len(extraHostFlags) > 0 {
-		result.ExtraHosts = []string(extraHostFlags)
+	if len(flags.extraHostFlags) > 0 {
+		result.ExtraHosts = []string(flags.extraHostFlags)
 	}
-
-	if len(capAddFlags) > 0 {
-		result.CapAdd = []string(capAddFlags)
+	if len(flags.capAddFlags) > 0 {
+		result.CapAdd = []string(flags.capAddFlags)
 	}
-
-	if len(capDropFlags) > 0 {
-		result.CapDrop = []string(capDropFlags)
+	if len(flags.capDropFlags) > 0 {
+		result.CapDrop = []string(flags.capDropFlags)
 	}
-
-	if len(tmpfsFlags) > 0 {
-		result.Tmpfs = []string(tmpfsFlags)
+	if len(flags.tmpfsFlags) > 0 {
+		result.Tmpfs = []string(flags.tmpfsFlags)
 	}
-
-	return result
 }
+
+// ensureMap ensures a map is initialized
+func ensureMap(m *map[string]string) {
+	if *m == nil {
+		*m = make(map[string]string)
+	}
+}
+
+// parseKeyValues parses "key=value,key=value" into a map
+func parseKeyValues(input, sep string, target map[string]string) {
+	for _, item := range strings.Split(input, sep) {
+		parts := strings.SplitN(item, "=", 2)
+		if len(parts) == 2 {
+			target[parts[0]] = parts[1]
+		}
+	}
+}
+
+// parseArrayFlags parses array flags into a map
+func parseArrayFlags(flags arrayFlags, target map[string]string) {
+	for _, item := range flags {
+		parts := strings.SplitN(item, "=", 2)
+		if len(parts) == 2 {
+			target[parts[0]] = parts[1]
+		}
+	}
+}
+
+// =============================================================================
+// Version and Help
+// =============================================================================
 
 // This will be defined on build time
 var version string
@@ -783,24 +826,24 @@ Config File:
     containerPort: "3000"
     hostPort: "3000"
     restartPolicy: unless-stopped
-    
+
     healthCmd: "curl -f http://localhost:3000/health"
     healthInterval: "30s"
     healthTimeout: "10s"
     healthRetries: 3
-    
+
     env:
       NODE_ENV: production
       LOG_LEVEL: info
-    
+
     labels:
       app: my-app
       environment: production
-    
+
     buildArgs:
       VERSION: "1.0.0"
       GIT_HASH: ${GIT_HASH}
-    
+
     remoteCommands:
       - "docker system prune -f"
 
@@ -869,4 +912,4 @@ Examples:
 
   # Output stats as JSON (for piping to other tools)
   pipe --json | jq '.duration'
-` 
+`
