@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security Guide - Pipe</title>
+  <meta name="description" content="Security best practices for Pipe CLI deployments">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" type="image/png" sizes="32x32" href="images/favicon-32.png">
+  <style>
+    .ref-page { padding: 5rem 0 3rem; overflow-x: hidden; }
+    .ref-header { margin-bottom: 2rem; }
+    .ref-header h1 { font-size: 1.75rem; margin-bottom: 0.25rem; }
+    .ref-header p { color: var(--text-secondary); font-size: 0.9rem; }
+    .ref-nav {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-nav a {
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      font-family: var(--font-mono);
+      color: var(--text-secondary);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+    .ref-nav a:hover { border-color: var(--accent); color: var(--accent); }
+    .ref-section { margin-bottom: 2.5rem; }
+    .ref-section h2 {
+      font-size: 1rem;
+      font-family: var(--font-mono);
+      color: var(--accent);
+      margin-bottom: 1rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .ref-section h3 {
+      font-size: 0.9rem;
+      color: var(--text-primary);
+      margin: 1.5rem 0 0.75rem;
+    }
+    .ref-section p {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.6;
+      margin-bottom: 1rem;
+    }
+    .ref-section ul {
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      line-height: 1.8;
+      margin-bottom: 1rem;
+      padding-left: 1.5rem;
+    }
+    .ref-section li { margin-bottom: 0.25rem; }
+    .ref-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .ref-table th {
+      text-align: left;
+      padding: 0.5rem;
+      background: var(--bg-tertiary);
+      font-weight: 600;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    .ref-table td {
+      padding: 0.5rem;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+    .ref-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .ref-table code {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      background: var(--bg-tertiary);
+      padding: 0.1rem 0.3rem;
+    }
+    .code-block {
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border);
+      padding: 1rem;
+      margin: 1rem 0;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .code-block pre {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      line-height: 1.5;
+      margin: 0;
+    }
+    .code-block .comment { color: var(--text-muted); }
+    .code-block .key { color: var(--accent); }
+    .code-block .val { color: #c3e88d; }
+    .code-block .cmd { color: #82aaff; }
+    .warning-box {
+      background: rgba(251, 191, 36, 0.1);
+      border: 1px solid rgba(251, 191, 36, 0.3);
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .warning-box strong { color: #fbbf24; }
+    .checklist {
+      list-style: none;
+      padding-left: 0;
+    }
+    .checklist li {
+      position: relative;
+      padding-left: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+    .checklist li::before {
+      content: "☐";
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+    .tip-box {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+    .tip-box strong { color: var(--accent); }
+  </style>
+</head>
+<body>
+  <nav class="nav">
+    <div class="nav-inner">
+      <a href="index.html" class="logo">
+        <img src="images/logo-64.png" alt="Pipe" class="logo-img">
+        <span class="logo-text">pipe</span>
+      </a>
+      <div class="nav-links">
+        <a href="index.html#features">Features</a>
+        <a href="index.html#quickstart">Quick Start</a>
+        <a href="index.html#installation">Install</a>
+        <a href="config.html">Reference</a>
+        <a href="ci.html">CI/CD</a>
+        <a href="security.html">Security</a>
+        <a href="https://github.com/bjarneo/pipe" class="nav-github" target="_blank" rel="noopener">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+          </svg>
+        </a>
+      </div>
+      <button class="nav-toggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+      </button>
+    </div>
+  </nav>
+
+  <main class="ref-page">
+    <div class="container">
+      <div class="ref-header">
+        <h1>Security Guide</h1>
+        <p>Best practices for secure deployments with Pipe</p>
+      </div>
+
+      <nav class="ref-nav">
+        <a href="#overview">Overview</a>
+        <a href="#secrets">Secrets</a>
+        <a href="#env-files">Env Files</a>
+        <a href="#ssh">SSH</a>
+        <a href="#container">Container</a>
+        <a href="#validation">Validation</a>
+        <a href="#cicd">CI/CD</a>
+        <a href="#checklist">Checklist</a>
+      </nav>
+
+      <section id="overview" class="ref-section">
+        <h2>Overview</h2>
+        <p>Pipe is designed with security in mind:</p>
+        <ul>
+          <li><strong>No registry required</strong> — Images transfer directly via SSH, never touch public infrastructure</li>
+          <li><strong>Input validation</strong> — All configuration values are validated against strict patterns</li>
+          <li><strong>Shell injection prevention</strong> — Dangerous characters are blocked in user inputs</li>
+        </ul>
+      </section>
+
+      <section id="secrets" class="ref-section">
+        <h2>Handling Secrets</h2>
+        
+        <h3>Environment Variables (Recommended for CI/CD)</h3>
+        <p>Pass secrets through environment variables to avoid storing them in files or version control:</p>
+        
+        <div class="code-block">
+          <pre><span class="comment"># Set secrets in your CI/CD pipeline</span>
+<span class="cmd">export</span> DB_PASSWORD=<span class="val">"your-secret"</span>
+<span class="cmd">export</span> API_KEY=<span class="val">"your-api-key"</span>
+
+<span class="comment"># Use inline --env flags</span>
+<span class="cmd">pipe</span> --env DB_PASSWORD=<span class="val">"$DB_PASSWORD"</span> --env API_KEY=<span class="val">"$API_KEY"</span></pre>
+        </div>
+
+        <p>In GitHub Actions:</p>
+        <div class="code-block">
+          <pre><span class="key">- name:</span> <span class="val">Deploy</span>
+  <span class="key">env:</span>
+    <span class="key">DB_PASSWORD:</span> <span class="val">${{ secrets.DB_PASSWORD }}</span>
+    <span class="key">API_KEY:</span> <span class="val">${{ secrets.API_KEY }}</span>
+  <span class="key">run:</span> <span class="val">|</span>
+    pipe --env DB_PASSWORD="$DB_PASSWORD" --env API_KEY="$API_KEY"</pre>
+        </div>
+
+        <h3>Inline Environment Variables in Config</h3>
+        <p>You can also define environment variables directly in your <code>pipe.yaml</code>:</p>
+        
+        <div class="code-block">
+          <pre><span class="comment"># pipe.yaml</span>
+<span class="key">env:</span>
+  <span class="key">NODE_ENV:</span> <span class="val">production</span>
+  <span class="key">LOG_LEVEL:</span> <span class="val">info</span>
+  <span class="key">DB_HOST:</span> <span class="val">${DB_HOST}</span>  <span class="comment"># Expanded from environment</span></pre>
+        </div>
+
+        <div class="warning-box">
+          <strong>⚠️ Warning:</strong> Never commit secrets to your config file. Use environment variable expansion (<code>${VAR}</code>) for sensitive values.
+        </div>
+      </section>
+
+      <section id="env-files" class="ref-section">
+        <h2>Environment Files</h2>
+        
+        <p>For multiple environment variables, use an env file:</p>
+        
+        <div class="code-block">
+          <pre><span class="comment"># .env.production (DO NOT commit to git!)</span>
+DB_HOST=db.example.com
+DB_PASSWORD=supersecret
+API_KEY=sk-1234567890
+REDIS_URL=redis://localhost:6379</pre>
+        </div>
+
+        <p>Deploy with the env file:</p>
+        <div class="code-block">
+          <pre><span class="cmd">pipe</span> --env-file .env.production</pre>
+        </div>
+
+        <p>Or in <code>pipe.yaml</code>:</p>
+        <div class="code-block">
+          <pre><span class="key">envFile:</span> <span class="val">.env.production</span></pre>
+        </div>
+
+        <h3>How Env File Transfer Works</h3>
+        <ol>
+          <li>Pipe copies the env file to <code>~/&lt;filename&gt;</code> on the remote host via SCP</li>
+          <li>Docker runs the container with <code>--env-file ~/&lt;filename&gt;</code></li>
+          <li>The env file remains on the server for subsequent deployments</li>
+        </ol>
+
+        <h3>Combining Env File and Inline Variables</h3>
+        <p>You can use both approaches together — inline variables override file values:</p>
+        
+        <div class="code-block">
+          <pre><span class="comment"># pipe.yaml</span>
+<span class="key">envFile:</span> <span class="val">.env.production</span>
+<span class="key">env:</span>
+  <span class="key">LOG_LEVEL:</span> <span class="val">debug</span>  <span class="comment"># Override for this deployment</span></pre>
+        </div>
+
+        <div class="code-block">
+          <pre><span class="comment"># CLI takes highest priority</span>
+<span class="cmd">pipe</span> --env LOG_LEVEL=trace</pre>
+        </div>
+
+        <div class="tip-box">
+          <strong>💡 Tip:</strong> Add <code>.env*</code> to your <code>.gitignore</code> to prevent accidentally committing secrets.
+        </div>
+      </section>
+
+      <section id="ssh" class="ref-section">
+        <h2>SSH Security</h2>
+        
+        <h3>SSH Key Authentication</h3>
+        <p>Always use SSH keys instead of passwords:</p>
+        
+        <div class="code-block">
+          <pre><span class="comment"># Generate a dedicated deployment key</span>
+<span class="cmd">ssh-keygen</span> -t ed25519 -f ~/.ssh/deploy_key -C <span class="val">"deploy@myapp"</span>
+
+<span class="comment"># Add to remote server</span>
+<span class="cmd">ssh-copy-id</span> -i ~/.ssh/deploy_key.pub user@server.com
+
+<span class="comment"># Use in deployment</span>
+<span class="cmd">pipe</span> --ssh-key ~/.ssh/deploy_key</pre>
+        </div>
+
+        <p>In <code>pipe.yaml</code>:</p>
+        <div class="code-block">
+          <pre><span class="key">sshKey:</span> <span class="val">~/.ssh/deploy_key</span>
+<span class="key">sshPort:</span> <span class="val">"22"</span>  <span class="comment"># Or custom port like "2222"</span></pre>
+        </div>
+      </section>
+
+      <section id="container" class="ref-section">
+        <h2>Container Security</h2>
+        
+        <h3>Run as Non-Root User</h3>
+        <p>Never run containers as root in production:</p>
+        
+        <div class="code-block">
+          <pre><span class="key">containerUser:</span> <span class="val">"1000:1000"</span>  <span class="comment"># UID:GID</span></pre>
+        </div>
+
+        <h3>Drop All Capabilities</h3>
+        <p>Use the principle of least privilege:</p>
+        
+        <div class="code-block">
+          <pre><span class="key">capDrop:</span>
+  - <span class="val">ALL</span>           <span class="comment"># Drop all capabilities first</span>
+<span class="key">capAdd:</span>
+  - <span class="val">NET_BIND_SERVICE</span>  <span class="comment"># Add only what you need</span></pre>
+        </div>
+
+        <h3>Read-Only Root Filesystem</h3>
+        <p>Prevent container modifications:</p>
+        
+        <div class="code-block">
+          <pre><span class="key">readOnly:</span> <span class="val">true</span>
+<span class="key">tmpfs:</span>
+  - <span class="val">/tmp</span>
+  - <span class="val">/var/run</span></pre>
+        </div>
+
+        <h3>Use Init Process</h3>
+        <p>Handle zombie processes and signals properly:</p>
+        
+        <div class="code-block">
+          <pre><span class="key">init:</span> <span class="val">true</span></pre>
+        </div>
+
+        <h3>Resource Limits</h3>
+        <p>Prevent resource exhaustion attacks:</p>
+        
+        <div class="code-block">
+          <pre><span class="key">cpus:</span> <span class="val">"1"</span>       <span class="comment"># Limit to 1 CPU</span>
+<span class="key">memory:</span> <span class="val">"512m"</span>  <span class="comment"># Limit to 512MB RAM</span></pre>
+        </div>
+
+        <h3>Complete Security Configuration</h3>
+        <div class="code-block">
+          <pre><span class="comment"># pipe.yaml - Production security hardened</span>
+<span class="key">containerUser:</span> <span class="val">"1000:1000"</span>
+<span class="key">readOnly:</span> <span class="val">true</span>
+<span class="key">init:</span> <span class="val">true</span>
+
+<span class="key">capDrop:</span>
+  - <span class="val">ALL</span>
+<span class="key">capAdd:</span>
+  - <span class="val">NET_BIND_SERVICE</span>
+
+<span class="key">tmpfs:</span>
+  - <span class="val">/tmp</span>
+  - <span class="val">/var/run</span>
+
+<span class="key">cpus:</span> <span class="val">"1"</span>
+<span class="key">memory:</span> <span class="val">"512m"</span>
+
+<span class="key">healthCmd:</span> <span class="val">"curl -f http://localhost:3000/health || exit 1"</span>
+<span class="key">healthInterval:</span> <span class="val">"30s"</span>
+<span class="key">healthRetries:</span> <span class="val">3</span>
+
+<span class="key">logDriver:</span> <span class="val">json-file</span>
+<span class="key">logOpts:</span>
+  <span class="key">max-size:</span> <span class="val">"10m"</span>
+  <span class="key">max-file:</span> <span class="val">"3"</span></pre>
+        </div>
+      </section>
+
+      <section id="validation" class="ref-section">
+        <h2>Input Validation</h2>
+        
+        <p>Pipe validates all inputs to prevent shell injection attacks:</p>
+
+        <h3>Validated Patterns</h3>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Field</th><th>Allowed Pattern</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>host</code></td>
+              <td>Valid hostname or IP address</td>
+            </tr>
+            <tr>
+              <td><code>user</code></td>
+              <td>Unix username (lowercase, alphanumeric)</td>
+            </tr>
+            <tr>
+              <td><code>image</code></td>
+              <td>Lowercase alphanumeric with <code>.</code> <code>_</code> <code>/</code> <code>-</code></td>
+            </tr>
+            <tr>
+              <td><code>tag</code></td>
+              <td>Alphanumeric with <code>.</code> <code>_</code> <code>-</code></td>
+            </tr>
+            <tr>
+              <td><code>containerName</code></td>
+              <td>Alphanumeric with <code>_</code> <code>.</code> <code>-</code></td>
+            </tr>
+            <tr>
+              <td><code>platform</code></td>
+              <td>Whitelisted values only</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <h3>Blocked Characters</h3>
+        <p>The following characters are blocked in paths and values to prevent shell injection:</p>
+        
+        <div class="code-block">
+          <pre>; &amp; | $ ` \ \n \r " ' &lt; &gt; ( ) { }</pre>
+        </div>
+
+        <h3>Path Security</h3>
+        <ul>
+          <li>Path traversal (<code>..</code>) is blocked in file paths</li>
+          <li><code>envFile</code> and <code>dockerfile</code> must be relative paths</li>
+          <li>Absolute paths are rejected for security-sensitive fields</li>
+        </ul>
+
+        <h3>Remote Commands</h3>
+        <p>Remote commands are validated for dangerous patterns. The following are blocked:</p>
+        <ul>
+          <li><code>rm -rf /</code></li>
+          <li><code>mkfs</code></li>
+          <li><code>dd if=</code></li>
+          <li><code>&gt; /dev/</code></li>
+        </ul>
+      </section>
+
+      <section id="cicd" class="ref-section">
+        <h2>CI/CD Best Practices</h2>
+        
+        <h3>GitHub Actions Example</h3>
+        <div class="code-block">
+          <pre><span class="key">name:</span> <span class="val">Deploy</span>
+<span class="key">on:</span>
+  <span class="key">push:</span>
+    <span class="key">branches:</span> [<span class="val">main</span>]
+
+<span class="key">jobs:</span>
+  <span class="key">deploy:</span>
+    <span class="key">runs-on:</span> <span class="val">ubuntu-latest</span>
+    <span class="key">steps:</span>
+      - <span class="key">uses:</span> <span class="val">actions/checkout@v4</span>
+      
+      - <span class="key">name:</span> <span class="val">Setup SSH Key</span>
+        <span class="key">run:</span> <span class="val">|</span>
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          
+      - <span class="key">name:</span> <span class="val">Deploy</span>
+        <span class="key">env:</span>
+          <span class="key">HOST:</span> <span class="val">${{ vars.DEPLOY_HOST }}</span>
+          <span class="key">HOST_USER:</span> <span class="val">${{ vars.DEPLOY_USER }}</span>
+          <span class="key">DB_PASSWORD:</span> <span class="val">${{ secrets.DB_PASSWORD }}</span>
+        <span class="key">run:</span> <span class="val">|</span>
+          pipe --ssh-key ~/.ssh/deploy_key --env DB_PASSWORD="$DB_PASSWORD"</pre>
+        </div>
+
+        <h3>Never Commit Secrets</h3>
+        <p>Add to <code>.gitignore</code>:</p>
+        
+        <div class="code-block">
+          <pre>.env
+.env.*
+*.pem
+*.key
+deploy_key</pre>
+        </div>
+
+        <h3>Use Environment Variables for Sensitive Config</h3>
+        <div class="code-block">
+          <pre><span class="comment"># pipe.yaml - Safe to commit</span>
+<span class="key">host:</span> <span class="val">${DEPLOY_HOST}</span>
+<span class="key">user:</span> <span class="val">${DEPLOY_USER}</span>
+<span class="key">sshKey:</span> <span class="val">${SSH_KEY_PATH}</span></pre>
+        </div>
+      </section>
+
+      <section id="checklist" class="ref-section">
+        <h2>Security Checklist</h2>
+        
+        <p>Before deploying to production:</p>
+        
+        <ul class="checklist">
+          <li>SSH key authentication configured (no passwords)</li>
+          <li>Secrets passed via environment variables, not config files</li>
+          <li><code>.env</code> files excluded from git</li>
+          <li>Container runs as non-root user</li>
+          <li>Capabilities dropped (at minimum <code>--cap-drop ALL</code>)</li>
+          <li>Read-only filesystem enabled (with tmpfs for writeable paths)</li>
+          <li>Resource limits set (CPU and memory)</li>
+          <li>Health checks configured</li>
+          <li>Log rotation configured</li>
+          <li>Docker network isolation configured</li>
+          <li>Dry-run tested before production deployment</li>
+        </ul>
+
+        <div class="code-block">
+          <pre><span class="comment"># Always preview first</span>
+<span class="cmd">pipe</span> --dry-run</pre>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <img src="images/logo-64.png" alt="Pipe" class="footer-logo">
+          <span>pipe</span>
+        </div>
+        <p>Open source Docker deployment tool.</p>
+        <div class="footer-links">
+          <a href="https://github.com/bjarneo/pipe" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/bjarneo/pipe/issues" target="_blank" rel="noopener">Issues</a>
+          <a href="https://github.com/bjarneo/pipe/blob/main/LICENSE" target="_blank" rel="noopener">MIT License</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
