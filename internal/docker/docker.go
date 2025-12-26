@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"slices"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -68,12 +69,23 @@ func buildDockerBuildCmd(cfg *config.Config) string {
 	var parts []string
 	parts = append(parts, "docker", "build", "--platform", cfg.Platform)
 
-	for key, value := range cfg.BuildArgs {
-		parts = append(parts, "--build-arg", fmt.Sprintf("%s=%s", key, value))
+	// Sort keys for deterministic command generation
+	for _, key := range sortedKeys(cfg.BuildArgs) {
+		parts = append(parts, "--build-arg", fmt.Sprintf("%s=%s", key, cfg.BuildArgs[key]))
 	}
 
 	parts = append(parts, "-t", imageRef(cfg), ".")
 	return strings.Join(parts, " ")
+}
+
+// sortedKeys returns the keys of a map in sorted order
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
 }
 
 // imageRef returns the full image reference (image:tag)
@@ -531,15 +543,17 @@ func (b *RunBuilder) addEnvironment() {
 	if b.cfg.EnvFile != "" {
 		b.args = append(b.args, fmt.Sprintf("--env-file ~/%s", b.cfg.EnvFile))
 	}
-	for key, value := range b.cfg.Env {
-		b.args = append(b.args, "-e", fmt.Sprintf("%s=%s", key, value))
+	// Sort keys for deterministic command generation
+	for _, key := range sortedKeys(b.cfg.Env) {
+		b.args = append(b.args, "-e", fmt.Sprintf("%s=%s", key, b.cfg.Env[key]))
 	}
 }
 
 // addLabels adds container labels
 func (b *RunBuilder) addLabels() {
-	for key, value := range b.cfg.Labels {
-		b.args = append(b.args, "--label", fmt.Sprintf("%s=%s", key, value))
+	// Sort keys for deterministic command generation
+	for _, key := range sortedKeys(b.cfg.Labels) {
+		b.args = append(b.args, "--label", fmt.Sprintf("%s=%s", key, b.cfg.Labels[key]))
 	}
 }
 
@@ -609,8 +623,9 @@ func (b *RunBuilder) addLogging() {
 	if b.cfg.LogDriver != "" {
 		b.args = append(b.args, "--log-driver", b.cfg.LogDriver)
 	}
-	for key, value := range b.cfg.LogOpts {
-		b.args = append(b.args, "--log-opt", fmt.Sprintf("%s=%s", key, value))
+	// Sort keys for deterministic command generation
+	for _, key := range sortedKeys(b.cfg.LogOpts) {
+		b.args = append(b.args, "--log-opt", fmt.Sprintf("%s=%s", key, b.cfg.LogOpts[key]))
 	}
 }
 
