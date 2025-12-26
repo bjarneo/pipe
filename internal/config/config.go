@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -98,20 +99,23 @@ var validPlatforms = map[string]bool{
 
 // Validate validates the configuration
 func (c *Config) Validate() error {
-	var errs []string
+	msgs := c.validateRequired()
+	msgs = append(msgs, c.validateFormats()...)
+	msgs = append(msgs, c.validatePaths()...)
+	msgs = append(msgs, c.validateMaps()...)
+	msgs = append(msgs, c.validateSlices()...)
+	msgs = append(msgs, c.validateContainerOptions()...)
+	msgs = append(msgs, c.validateRemoteCommands()...)
 
-	errs = append(errs, c.validateRequired()...)
-	errs = append(errs, c.validateFormats()...)
-	errs = append(errs, c.validatePaths()...)
-	errs = append(errs, c.validateMaps()...)
-	errs = append(errs, c.validateSlices()...)
-	errs = append(errs, c.validateContainerOptions()...)
-	errs = append(errs, c.validateRemoteCommands()...)
-
-	if len(errs) > 0 {
-		return fmt.Errorf("configuration validation failed:\n  - %s", strings.Join(errs, "\n  - "))
+	if len(msgs) == 0 {
+		return nil
 	}
-	return nil
+
+	errs := make([]error, len(msgs))
+	for i, msg := range msgs {
+		errs[i] = errors.New(msg)
+	}
+	return errors.Join(errs...)
 }
 
 func (c *Config) validateRequired() []string {
@@ -207,41 +211,21 @@ func (c *Config) validatePaths() []string {
 func (c *Config) validateMaps() []string {
 	var errs []string
 
-	for key, value := range c.BuildArgs {
-		if !buildArgKeyRegex.MatchString(key) {
-			errs = append(errs, fmt.Sprintf("build-arg key '%s' contains invalid characters", key))
-		}
-		if dangerousCharsRegex.MatchString(value) {
-			errs = append(errs, fmt.Sprintf("build-arg value for '%s' contains dangerous shell characters", key))
-		}
-	}
-
-	for key, value := range c.Env {
-		if !buildArgKeyRegex.MatchString(key) {
-			errs = append(errs, fmt.Sprintf("env key '%s' contains invalid characters", key))
-		}
-		if dangerousCharsRegex.MatchString(value) {
-			errs = append(errs, fmt.Sprintf("env value for '%s' contains dangerous shell characters", key))
+	validateMap := func(m map[string]string, keyRegex *regexp.Regexp, name string) {
+		for key, value := range m {
+			if !keyRegex.MatchString(key) {
+				errs = append(errs, fmt.Sprintf("%s key '%s' contains invalid characters", name, key))
+			}
+			if dangerousCharsRegex.MatchString(value) {
+				errs = append(errs, fmt.Sprintf("%s value for '%s' contains dangerous shell characters", name, key))
+			}
 		}
 	}
 
-	for key, value := range c.Labels {
-		if !labelKeyRegex.MatchString(key) {
-			errs = append(errs, fmt.Sprintf("label key '%s' contains invalid characters", key))
-		}
-		if dangerousCharsRegex.MatchString(value) {
-			errs = append(errs, fmt.Sprintf("label value for '%s' contains dangerous shell characters", key))
-		}
-	}
-
-	for key, value := range c.LogOpts {
-		if !logOptKeyRegex.MatchString(key) {
-			errs = append(errs, fmt.Sprintf("log-opt key '%s' contains invalid characters", key))
-		}
-		if dangerousCharsRegex.MatchString(value) {
-			errs = append(errs, fmt.Sprintf("log-opt value for '%s' contains dangerous shell characters", key))
-		}
-	}
+	validateMap(c.BuildArgs, buildArgKeyRegex, "build-arg")
+	validateMap(c.Env, buildArgKeyRegex, "env")
+	validateMap(c.Labels, labelKeyRegex, "label")
+	validateMap(c.LogOpts, logOptKeyRegex, "log-opt")
 
 	return errs
 }
@@ -281,23 +265,15 @@ func (c *Config) validateSlices() []string {
 		}
 	}
 
-	for _, cap := range c.CapAdd {
-		if cap == "" {
-			continue
-		}
-		if !capabilityRegex.MatchString(cap) {
-			errs = append(errs, fmt.Sprintf("cap-add '%s' is not a valid Linux capability name", cap))
-		}
-	}
-
-	for _, cap := range c.CapDrop {
-		if cap == "" {
-			continue
-		}
-		if !capabilityRegex.MatchString(cap) {
-			errs = append(errs, fmt.Sprintf("cap-drop '%s' is not a valid Linux capability name", cap))
+	validateCaps := func(caps []string, name string) {
+		for _, cap := range caps {
+			if cap != "" && !capabilityRegex.MatchString(cap) {
+				errs = append(errs, fmt.Sprintf("%s '%s' is not a valid Linux capability name", name, cap))
+			}
 		}
 	}
+	validateCaps(c.CapAdd, "cap-add")
+	validateCaps(c.CapDrop, "cap-drop")
 
 	for _, tmpfs := range c.Tmpfs {
 		if tmpfs == "" {
@@ -342,23 +318,19 @@ func (c *Config) validateRemoteCommands() []string {
 func (c *Config) validateContainerOptions() []string {
 	var errs []string
 
-	if c.HealthCmd != "" {
-		if dangerousCharsRegex.MatchString(c.HealthCmd) {
-			errs = append(errs, "health-cmd contains dangerous shell characters")
+	checkDangerousChars := func(value, name string) {
+		if value != "" && dangerousCharsRegex.MatchString(value) {
+			errs = append(errs, name+" contains dangerous shell characters")
 		}
 	}
 
-	if c.Command != "" {
-		if dangerousCharsRegex.MatchString(c.Command) {
-			errs = append(errs, "command contains dangerous shell characters")
-		}
-	}
-
-	if c.Entrypoint != "" {
-		if dangerousCharsRegex.MatchString(c.Entrypoint) {
-			errs = append(errs, "entrypoint contains dangerous shell characters")
-		}
-	}
+	checkDangerousChars(c.HealthCmd, "health-cmd")
+	checkDangerousChars(c.Command, "command")
+	checkDangerousChars(c.Entrypoint, "entrypoint")
+	checkDangerousChars(c.ContainerUser, "container-user")
+	checkDangerousChars(c.HealthInterval, "health-interval")
+	checkDangerousChars(c.HealthTimeout, "health-timeout")
+	checkDangerousChars(c.HealthStart, "health-start-period")
 
 	if c.Workdir != "" {
 		if !strings.HasPrefix(c.Workdir, "/") {
@@ -367,28 +339,15 @@ func (c *Config) validateContainerOptions() []string {
 		if strings.Contains(c.Workdir, "..") {
 			errs = append(errs, "workdir contains path traversal sequence")
 		}
-		if dangerousCharsRegex.MatchString(c.Workdir) {
-			errs = append(errs, "workdir contains dangerous shell characters")
-		}
+		checkDangerousChars(c.Workdir, "workdir")
 	}
 
-	if c.Hostname != "" {
-		if !hostnameRegex.MatchString(c.Hostname) {
-			errs = append(errs, "hostname contains invalid characters")
-		}
-	}
-
-	if c.ContainerUser != "" {
-		if dangerousCharsRegex.MatchString(c.ContainerUser) {
-			errs = append(errs, "container-user contains dangerous shell characters")
-		}
+	if c.Hostname != "" && !hostnameRegex.MatchString(c.Hostname) {
+		errs = append(errs, "hostname contains invalid characters")
 	}
 
 	validRestartPolicies := map[string]bool{
-		"no":             true,
-		"always":         true,
-		"on-failure":     true,
-		"unless-stopped": true,
+		"no": true, "always": true, "on-failure": true, "unless-stopped": true,
 	}
 	if c.RestartPolicy != "" && !validRestartPolicies[c.RestartPolicy] {
 		errs = append(errs, "restart policy must be one of: no, always, on-failure, unless-stopped")
@@ -396,35 +355,12 @@ func (c *Config) validateContainerOptions() []string {
 
 	if c.LogDriver != "" {
 		validLogDrivers := map[string]bool{
-			"json-file": true,
-			"syslog":    true,
-			"journald":  true,
-			"gelf":      true,
-			"fluentd":   true,
-			"awslogs":   true,
-			"splunk":    true,
-			"gcplogs":   true,
-			"local":     true,
-			"none":      true,
+			"json-file": true, "syslog": true, "journald": true, "gelf": true,
+			"fluentd": true, "awslogs": true, "splunk": true, "gcplogs": true,
+			"local": true, "none": true,
 		}
 		if !validLogDrivers[c.LogDriver] {
 			errs = append(errs, fmt.Sprintf("log-driver '%s' is not a recognized Docker log driver", c.LogDriver))
-		}
-	}
-
-	if c.HealthInterval != "" {
-		if dangerousCharsRegex.MatchString(c.HealthInterval) {
-			errs = append(errs, "health-interval contains dangerous shell characters")
-		}
-	}
-	if c.HealthTimeout != "" {
-		if dangerousCharsRegex.MatchString(c.HealthTimeout) {
-			errs = append(errs, "health-timeout contains dangerous shell characters")
-		}
-	}
-	if c.HealthStart != "" {
-		if dangerousCharsRegex.MatchString(c.HealthStart) {
-			errs = append(errs, "health-start-period contains dangerous shell characters")
 		}
 	}
 

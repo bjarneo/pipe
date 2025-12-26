@@ -51,11 +51,7 @@ var envMapping = map[string]string{
 }
 
 func loadConfigFile(configPath string) config.Config {
-	var cfg config.Config
-	cfg.BuildArgs = make(map[string]string)
-	cfg.Labels = make(map[string]string)
-	cfg.Env = make(map[string]string)
-	cfg.LogOpts = make(map[string]string)
+	cfg := newConfigWithMaps()
 
 	configPath = findConfigFile(configPath)
 	if configPath == "" {
@@ -70,6 +66,15 @@ func loadConfigFile(configPath string) config.Config {
 	_ = yaml.Unmarshal(data, &cfg)
 	expandEnvVars(&cfg)
 	return cfg
+}
+
+func newConfigWithMaps() config.Config {
+	return config.Config{
+		BuildArgs: make(map[string]string),
+		Labels:    make(map[string]string),
+		Env:       make(map[string]string),
+		LogOpts:   make(map[string]string),
+	}
 }
 
 func findConfigFile(path string) string {
@@ -163,19 +168,16 @@ func mergeConfigs(fileConfig, cliConfig config.Config) config.Config {
 	result.Verbose = mergeBool(cliConfig.Verbose, "VERBOSE", fileConfig.Verbose)
 	result.JSONOutput = mergeBool(cliConfig.JSONOutput, "JSON_OUTPUT", fileConfig.JSONOutput)
 
-	// Merge maps from file config
-	if result.BuildArgs == nil {
-		result.BuildArgs = make(map[string]string)
+	// Ensure maps are initialized
+	ensureMap := func(m *map[string]string) {
+		if *m == nil {
+			*m = make(map[string]string)
+		}
 	}
-	if result.Labels == nil {
-		result.Labels = make(map[string]string)
-	}
-	if result.Env == nil {
-		result.Env = make(map[string]string)
-	}
-	if result.LogOpts == nil {
-		result.LogOpts = make(map[string]string)
-	}
+	ensureMap(&result.BuildArgs)
+	ensureMap(&result.Labels)
+	ensureMap(&result.Env)
+	ensureMap(&result.LogOpts)
 
 	// Build args from env
 	if envBuildArgs := os.Getenv("DOCKER_BUILD_ARGS"); envBuildArgs != "" {
