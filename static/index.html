@@ -453,13 +453,43 @@ hostPort: &quot;3000&quot;">
                   <td><code>JSON_OUTPUT</code></td>
                   <td>Output stats as JSON</td>
                 </tr>
-                <tr>
-                  <td><code>--rollback</code></td>
-                  <td>—</td>
-                  <td>Rollback to previous version</td>
-                </tr>
               </tbody>
             </table>
+          </div>
+          <div class="config-commands">
+            <h3>Subcommands</h3>
+            <div class="table-wrapper">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Command</th>
+                    <th>Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><code>pipe</code></td>
+                    <td>Deploy (default)</td>
+                  </tr>
+                  <tr>
+                    <td><code>pipe stats</code></td>
+                    <td>Show container stats</td>
+                  </tr>
+                  <tr>
+                    <td><code>pipe rollback</code></td>
+                    <td>Rollback to previous version</td>
+                  </tr>
+                  <tr>
+                    <td><code>pipe version</code></td>
+                    <td>Show version info</td>
+                  </tr>
+                  <tr>
+                    <td><code>pipe completion</code></td>
+                    <td>Generate shell completions</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
           <p class="config-note">See the <a href="config.html">full configuration reference</a> for all options, or <a href="ci.html">CI/CD integration</a> for GitHub Actions and GitLab CI examples.</p>
         </div>
@@ -686,7 +716,7 @@ pipe --tag v1.0.0
 pipe --tag v1.0.1
 
 # Something went wrong? Roll back
-pipe --rollback">
+pipe rollback">
                   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <rect x="9" y="9" width="13" height="13" rx="2"/>
                     <path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/>
@@ -700,7 +730,7 @@ pipe --tag v1.0.0
 pipe --tag v1.0.1
 
 <span class="token-comment"># Something went wrong? Roll back</span>
-pipe --rollback</code></pre>
+pipe rollback</code></pre>
             </div>
           </div>
         </div>

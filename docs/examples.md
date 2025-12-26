@@ -58,7 +58,7 @@ View real-time container statistics from the remote host:
 
 ```bash
 # Show container stats (CPU, memory, network, etc.)
-pipe --stats
+pipe stats
 ```
 
 Example output:
@@ -95,11 +95,11 @@ Example output:
 
 ```bash
 # Output stats as JSON for scripting
-pipe --stats --json
+pipe stats --json
 
 # Pipe to jq for specific values
-pipe --stats --json | jq '.resources.cpuPercent'
-pipe --stats --json | jq '.container.uptime'
+pipe stats --json | jq '.resources.cpuPercent'
+pipe stats --json | jq '.container.uptime'
 ```
 
 JSON output structure:
@@ -372,7 +372,7 @@ VERSION=v1.0.0 pipe --tag v1.0.0
 VERSION=v1.0.1 pipe --tag v1.0.1
 
 # Oops! Rollback to v1.0.0
-pipe --rollback
+pipe rollback
 ```
 
 ### Automatic Versioning

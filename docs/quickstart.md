@@ -102,7 +102,10 @@ pipe --tag v1.0.0
 pipe --verbose
 
 # Rollback to previous version
-pipe --rollback
+pipe rollback
+
+# Show container stats
+pipe stats
 ```
 
 ## Adding Health Checks

@@ -170,9 +170,20 @@ remoteCommands:
 | `--ssh-port` | `SSH_PORT` | `22` | SSH port |
 | `--ssh-key` | `SSH_KEY_PATH` | - | SSH private key path |
 | `--dry-run` | `DRY_RUN` | `false` | Preview without changes |
-| `--verbose`, `-v` | `VERBOSE` | `false` | Detailed output |
+| `--verbose` | `VERBOSE` | `false` | Detailed output |
 | `--json` | `JSON_OUTPUT` | `false` | Output stats as JSON |
-| `--stats` | - | `false` | Show container stats from remote host |
+
+### Commands
+
+| Command | Description |
+|---------|-------------|
+| `pipe` | Deploy (default command) |
+| `pipe stats` | Show container stats from remote host |
+| `pipe stats --json` | Output stats as JSON |
+| `pipe rollback` | Rollback to previous version |
+| `pipe version` | Show version information |
+| `pipe help` | Show help |
+| `pipe completion bash` | Generate shell completions |
 
 ### Image Options
 
@@ -244,8 +255,15 @@ remoteCommands:
 | Flag | Env Variable | Default | Description |
 |------|--------------|---------|-------------|
 | `--remote-command` | `REMOTE_COMMANDS` | - | Post-deploy command (repeatable) |
-| `--rollback` | - | `false` | Rollback to previous |
-| `--stats` | - | `false` | Show container stats (CPU, memory, network) |
+
+### Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `pipe stats` | Show container stats (CPU, memory, network) |
+| `pipe rollback` | Rollback to previous version |
+| `pipe version` | Show version information |
+| `pipe completion` | Generate shell completion scripts |
 
 ---
 

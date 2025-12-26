@@ -147,6 +147,7 @@
         <a href="#security">Security</a>
         <a href="#logging">Logging</a>
         <a href="#advanced">Advanced</a>
+        <a href="#commands">Commands</a>
         <a href="#output">Output</a>
       </nav>
 
@@ -521,12 +522,44 @@
               <td class="default">pipe.yaml</td>
               <td class="desc">Config file path</td>
             </tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="commands" class="ref-section">
+        <h2>Subcommands</h2>
+        <table class="ref-table">
+          <thead>
+            <tr><th>Command</th><th>Description</th></tr>
+          </thead>
+          <tbody>
             <tr>
-              <td><code>--rollback</code></td>
-              <td class="env">-</td>
-              <td><code>-</code></td>
-              <td class="default">false</td>
+              <td><code>pipe</code></td>
+              <td class="desc">Deploy (default command)</td>
+            </tr>
+            <tr>
+              <td><code>pipe stats</code></td>
+              <td class="desc">Show container stats (CPU, memory, network)</td>
+            </tr>
+            <tr>
+              <td><code>pipe stats --json</code></td>
+              <td class="desc">Output container stats as JSON</td>
+            </tr>
+            <tr>
+              <td><code>pipe rollback</code></td>
               <td class="desc">Rollback to previous version</td>
+            </tr>
+            <tr>
+              <td><code>pipe version</code></td>
+              <td class="desc">Show version information</td>
+            </tr>
+            <tr>
+              <td><code>pipe completion bash</code></td>
+              <td class="desc">Generate shell completion scripts</td>
+            </tr>
+            <tr>
+              <td><code>pipe help</code></td>
+              <td class="desc">Show help</td>
             </tr>
           </tbody>
         </table>

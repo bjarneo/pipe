@@ -88,13 +88,16 @@ VERSION=1.0.0 GIT_SHA=$(git rev-parse --short HEAD) pipe
 
 ```bash
 pipe                          # Deploy using pipe.yaml
-pipe --dry-run               # Preview without making changes
-pipe --verbose               # Show detailed output
-pipe --tag v2.0.0            # Deploy specific version
-pipe --rollback              # Rollback to previous version
-pipe --stats                 # Show container stats (CPU, memory, network)
-pipe --stats --json          # Output stats as JSON
-pipe --config prod.yaml      # Use different config
+pipe --dry-run                # Preview without making changes
+pipe --verbose                # Show detailed output
+pipe --tag v2.0.0             # Deploy specific version
+pipe rollback                 # Rollback to previous version
+pipe stats                    # Show container stats (CPU, memory, network)
+pipe stats --json             # Output stats as JSON
+pipe --config prod.yaml       # Use different config
+pipe version                  # Show version information
+pipe help                     # Show help
+pipe completion bash          # Generate shell completions
 ```
 
 ## Features
