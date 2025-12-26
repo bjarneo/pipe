@@ -10,9 +10,10 @@ Pipe is a Docker deployment CLI tool written in Go that transfers Docker images 
 
 ```
 pipe/
-├── main.go                 # Entry point - loads config, runs deploy or rollback
+├── main.go                 # Entry point - loads config, runs deploy, rollback, or stats
 ├── internal/
 │   ├── config/            # Configuration loading (CLI, env vars, YAML file)
+│   ├── container/         # Container stats retrieval and display
 │   ├── deploy/            # Deployment and rollback orchestration
 │   ├── docker/            # Docker build, transfer, and container management
 │   ├── ssh/               # SSH command execution
@@ -54,6 +55,7 @@ Configuration is loaded in this order (highest to lowest priority):
 ## Key Files to Understand
 
 - `internal/config/config.go` - All configuration options, validation, and loading logic
+- `internal/container/container.go` - Remote container stats via docker stats/inspect
 - `internal/docker/docker.go` - Docker build, delta transfer, and container deployment
 - `internal/deploy/deploy.go` - Main deployment orchestration and dry-run
 - `internal/ssh/ssh.go` - SSH/SCP command building and execution
@@ -62,10 +64,10 @@ Configuration is loaded in this order (highest to lowest priority):
 
 When adding new container options:
 1. Add field to `Config` struct in `config.go` with json/yaml tags
-2. Add CLI flag in `Load()` function
-3. Add to `mergeConfig()` with appropriate env var mapping
+2. Add CLI flag in `defineFlags()` function
+3. Add to `mergeConfig()` with appropriate env var mapping (for bool flags, copy directly like `result.ShowStats = cliConfig.ShowStats`)
 4. Add to `expandEnvVars()` if string type
-5. Add to `buildContainerConfig()` in `docker.go`
+5. Add to `buildContainerConfig()` in `docker.go` if it affects container run
 6. Update help text and documentation
 
 ## Testing Locally
@@ -75,6 +77,11 @@ Without a real remote host, use `--dry-run` to preview:
 ./pipe --host example.com --user deploy --dry-run
 ```
 
+To test stats without deploying:
+```bash
+./pipe --stats --host example.com --user deploy
+```
+
 ## Common Patterns
 
 - Use `ssh.GetCommand(cfg)` for SSH commands
@@ -82,3 +89,4 @@ Without a real remote host, use `--dry-run` to preview:
 - Use `ssh.ExecuteCommand(log, cmd, description)` for running commands
 - Maps like `BuildArgs`, `Env`, `Labels` are KEY=VALUE pairs
 - Array flags (volumes, caps, etc.) can be specified multiple times
+- For SSH commands with docker format templates, use single quotes outside and double quotes for the format string: `ssh user@host 'docker inspect --format "{{.Id}}" container'`
