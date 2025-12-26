@@ -1,0 +1,33 @@
+#!/bin/sh
+# Pre-commit hook for pipe
+# Install with: make install-hooks
+
+set -e
+
+echo "Running pre-commit checks..."
+
+# Format check (don't auto-fix, just check)
+echo "Checking formatting..."
+if [ -n "$(gofmt -l .)" ]; then
+    echo "ERROR: Files need formatting. Run 'make fmt' to fix."
+    gofmt -l .
+    exit 1
+fi
+
+# Lint
+echo "Running linter..."
+golangci-lint run
+if [ $? -ne 0 ]; then
+    echo "ERROR: Linting failed. Fix issues before committing."
+    exit 1
+fi
+
+# Tests
+echo "Running tests..."
+go test ./...
+if [ $? -ne 0 ]; then
+    echo "ERROR: Tests failed. Fix tests before committing."
+    exit 1
+fi
+
+echo "All checks passed!"

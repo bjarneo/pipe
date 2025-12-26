@@ -148,4 +148,4 @@ func (l *Logger) Close() error {
 		return nil
 	}
 	return l.file.Close()
-} 
+}

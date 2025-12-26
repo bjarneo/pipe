@@ -51,7 +51,7 @@ func TestGetCommand(t *testing.T) {
 			name: "with key and custom port",
 			config: &config.Config{
 				Host:    "example.com",
-				User:   "deploy",
+				User:    "deploy",
 				SSHKey:  "/path/to/key",
 				SSHPort: "2222",
 			},

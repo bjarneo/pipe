@@ -301,4 +301,4 @@ func restoreBackup(ctx context.Context, cfg *config.Config, log *logger.Logger) 
 		cfg.ContainerName, cfg.ContainerName, cfg.ContainerName)
 	_, err := ssh.ExecuteCommandContext(ctx, log, restoreCmd, "Restoring previous version after failed rollback")
 	return err
-} 
+}

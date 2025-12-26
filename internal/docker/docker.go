@@ -78,7 +78,7 @@ func Build(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 }
 
 func buildDockerBuildCmd(cfg *config.Config) string {
-	var parts []string
+	parts := make([]string, 0, 5+len(cfg.BuildArgs)*2)
 	parts = append(parts, "docker", "build", "--platform", cfg.Platform)
 
 	for _, key := range sortedKeys(cfg.BuildArgs) {
@@ -605,10 +605,6 @@ func (b *RunBuilder) addOverrides() {
 	if b.cfg.Entrypoint != "" {
 		b.args = append(b.args, "--entrypoint", b.cfg.Entrypoint)
 	}
-}
-
-func (b *RunBuilder) addImage() {
-	b.addImageWithRef(imageRef(b.cfg))
 }
 
 func (b *RunBuilder) addImageWithRef(image string) {

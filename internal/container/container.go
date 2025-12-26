@@ -20,6 +20,12 @@ const (
 
 	// containerIDDisplayLen is the length to truncate container IDs to
 	containerIDDisplayLen = 12
+
+	// healthStatusNA represents unavailable health status
+	healthStatusNA = "N/A"
+
+	// healthStatusHealthy represents healthy container status
+	healthStatusHealthy = "healthy"
 )
 
 // Stats holds container statistics
@@ -105,10 +111,10 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 	if healthResult, err := ssh.ExecuteCommandContext(ctx, log, healthCmd, "Getting health status"); err == nil {
 		stats.Health = strings.TrimSpace(healthResult.Stdout)
 		if stats.Health == "" {
-			stats.Health = "N/A"
+			stats.Health = healthStatusNA
 		}
 	} else {
-		stats.Health = "N/A"
+		stats.Health = healthStatusNA
 	}
 
 	portsCmd := fmt.Sprintf(`%s 'docker port %s'`, ssh.GetCommand(cfg), cfg.ContainerName)
@@ -174,7 +180,7 @@ func (s *Stats) PrintStats() {
 	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  ID: %s", s.ID), width))
 	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Image: %s", s.Image), width))
 	fmt.Printf("║%s║\n", format.PadRightWithEmoji(fmt.Sprintf("  Status: %s", colorizeStatus(s.Status)), width))
-	if s.Health != "N/A" {
+	if s.Health != healthStatusNA {
 		fmt.Printf("║%s║\n", format.PadRightWithEmoji(fmt.Sprintf("  Health: %s", colorizeHealth(s.Health)), width))
 	}
 	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Created: %s", s.Created), width))
@@ -281,7 +287,7 @@ func colorizeStatus(status string) string {
 
 func colorizeHealth(health string) string {
 	switch strings.ToLower(health) {
-	case "healthy":
+	case healthStatusHealthy:
 		return "🟢 " + health
 	case "unhealthy":
 		return "🔴 " + health
@@ -291,4 +297,3 @@ func colorizeHealth(health string) string {
 		return health
 	}
 }
-

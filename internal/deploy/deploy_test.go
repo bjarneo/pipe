@@ -7,6 +7,8 @@ import (
 	"github.com/bjarneo/pipe/internal/config"
 )
 
+const testPreviousImage = "myapp:v1.0.0"
+
 func TestBuildRollbackCommands(t *testing.T) {
 	cfg := &config.Config{
 		Image:         "myapp",
@@ -17,8 +19,7 @@ func TestBuildRollbackCommands(t *testing.T) {
 		RestartPolicy: "always",
 	}
 
-	previousImage := "myapp:v1.0.0"
-	result := buildRollbackCommands(cfg, previousImage)
+	result := buildRollbackCommands(cfg, testPreviousImage)
 
 	// Check that it contains the expected docker commands
 	if !strings.Contains(result, "docker stop mycontainer") {
@@ -30,8 +31,8 @@ func TestBuildRollbackCommands(t *testing.T) {
 	if !strings.Contains(result, "docker run") {
 		t.Errorf("buildRollbackCommands() missing run command in %q", result)
 	}
-	if !strings.Contains(result, previousImage) {
-		t.Errorf("buildRollbackCommands() missing previous image %q in %q", previousImage, result)
+	if !strings.Contains(result, testPreviousImage) {
+		t.Errorf("buildRollbackCommands() missing previous image %q in %q", testPreviousImage, result)
 	}
 	// Commands should be chained with &&
 	if !strings.Contains(result, " && ") {
@@ -55,8 +56,7 @@ func TestBuildRollbackCommands_PreservesConfig(t *testing.T) {
 		Memory:        "512m",
 	}
 
-	previousImage := "myapp:v1.0.0"
-	result := buildRollbackCommands(cfg, previousImage)
+	result := buildRollbackCommands(cfg, testPreviousImage)
 
 	// Verify container configuration is preserved
 	if !strings.Contains(result, "--network mynetwork") {
@@ -93,8 +93,7 @@ func TestBuildRollbackCommands_WithHealthCheck(t *testing.T) {
 		HealthRetries:  3,
 	}
 
-	previousImage := "myapp:v1.0.0"
-	result := buildRollbackCommands(cfg, previousImage)
+	result := buildRollbackCommands(cfg, testPreviousImage)
 
 	if !strings.Contains(result, "--health-cmd") {
 		t.Errorf("buildRollbackCommands() missing health-cmd in %q", result)
@@ -125,8 +124,7 @@ func TestBuildRollbackCommands_WithSecurity(t *testing.T) {
 		CapDrop:       []string{"MKNOD"},
 	}
 
-	previousImage := "myapp:v1.0.0"
-	result := buildRollbackCommands(cfg, previousImage)
+	result := buildRollbackCommands(cfg, testPreviousImage)
 
 	if !strings.Contains(result, "--privileged") {
 		t.Errorf("buildRollbackCommands() missing --privileged in %q", result)
@@ -226,9 +224,9 @@ func TestFindPreviousImage(t *testing.T) {
 func TestFindPreviousImage_MalformedEntries(t *testing.T) {
 	// Test that malformed entries before the current image are skipped
 	images := []string{
-		"___",                        // malformed entry - skipped during iteration
-		"myapp:v2___2024-01-02",      // valid current
-		"myapp:v1___2024-01-01",      // valid previous (returned)
+		"___",                   // malformed entry - skipped during iteration
+		"myapp:v2___2024-01-02", // valid current
+		"myapp:v1___2024-01-01", // valid previous (returned)
 	}
 
 	result, err := findPreviousImage(images, "myapp:v2")
@@ -243,9 +241,9 @@ func TestFindPreviousImage_MalformedEntries(t *testing.T) {
 func TestFindPreviousImage_MalformedNextEntry(t *testing.T) {
 	// When the entry after current is malformed, it returns the malformed result
 	images := []string{
-		"myapp:v2___2024-01-02",      // valid current
-		"___",                        // malformed - but this is what gets returned
-		"myapp:v1___2024-01-01",      // not reached
+		"myapp:v2___2024-01-02", // valid current
+		"___",                   // malformed - but this is what gets returned
+		"myapp:v1___2024-01-01", // not reached
 	}
 
 	result, err := findPreviousImage(images, "myapp:v2")

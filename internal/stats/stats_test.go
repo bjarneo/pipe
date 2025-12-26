@@ -344,11 +344,11 @@ func TestFormatBytes_EdgeCases(t *testing.T) {
 		bytes    int64
 		contains string
 	}{
-		{1023, "B"},       // Just under 1KB
-		{1024, "KB"},      // Exactly 1KB
-		{1025, "KB"},      // Just over 1KB
-		{1048575, "KB"},   // Just under 1MB
-		{1048576, "MB"},   // Exactly 1MB
+		{1023, "B"},        // Just under 1KB
+		{1024, "KB"},       // Exactly 1KB
+		{1025, "KB"},       // Just over 1KB
+		{1048575, "KB"},    // Just under 1MB
+		{1048576, "MB"},    // Exactly 1MB
 		{1073741823, "MB"}, // Just under 1GB
 		{1073741824, "GB"}, // Exactly 1GB
 	}

@@ -561,10 +561,10 @@ func TestRunBuilder_BuildWithImage(t *testing.T) {
 
 func TestBuildDockerBuildCmd(t *testing.T) {
 	cfg := &config.Config{
-		Image:      "myapp",
-		Tag:        "latest",
-		Platform:   "linux/amd64",
-		BuildArgs:  map[string]string{"VERSION": "1.0.0", "ENV": "prod"},
+		Image:     "myapp",
+		Tag:       "latest",
+		Platform:  "linux/amd64",
+		BuildArgs: map[string]string{"VERSION": "1.0.0", "ENV": "prod"},
 	}
 
 	cmd := buildDockerBuildCmd(cfg)

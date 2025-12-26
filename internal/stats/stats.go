@@ -109,21 +109,21 @@ type JSONOutput struct {
 		Host string `json:"host"`
 	} `json:"container"`
 	Transfer struct {
-		TotalLayers      int    `json:"totalLayers"`
-		CachedLayers     int    `json:"cachedLayers"`
-		NewLayers        int    `json:"newLayers"`
+		TotalLayers      int     `json:"totalLayers"`
+		CachedLayers     int     `json:"cachedLayers"`
+		NewLayers        int     `json:"newLayers"`
 		CachePercent     float64 `json:"cachePercent"`
-		ImageSizeBytes   int64  `json:"imageSizeBytes"`
-		ImageSize        string `json:"imageSize"`
-		TransferredBytes int64  `json:"transferredBytes"`
-		Transferred      string `json:"transferred"`
+		ImageSizeBytes   int64   `json:"imageSizeBytes"`
+		ImageSize        string  `json:"imageSize"`
+		TransferredBytes int64   `json:"transferredBytes"`
+		Transferred      string  `json:"transferred"`
 		BandwidthSaved   float64 `json:"bandwidthSavedPercent"`
 	} `json:"transfer"`
 	Timing struct {
-		StartTime   string  `json:"startTime"`
-		EndTime     string  `json:"endTime"`
-		DurationMs  int64   `json:"durationMs"`
-		Duration    string  `json:"duration"`
+		StartTime  string `json:"startTime"`
+		EndTime    string `json:"endTime"`
+		DurationMs int64  `json:"durationMs"`
+		Duration   string `json:"duration"`
 	} `json:"timing"`
 	Success bool `json:"success"`
 }

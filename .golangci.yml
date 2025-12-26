@@ -1,0 +1,43 @@
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - goimports
+    - misspell
+    - bodyclose
+    - copyloopvar
+    - goconst
+    - gosec
+    - prealloc
+    - unconvert
+
+linters-settings:
+  goconst:
+    min-len: 3
+    min-occurrences: 3
+  gosec:
+    excludes:
+      - G104 # Unhandled errors - logger methods always return nil
+      - G204 # Subprocess launched with variable - expected for CLI tool
+      - G304 # File path provided as taint input - expected for config files
+  errcheck:
+    exclude-functions:
+      # Logger methods that always return nil
+      - (*github.com/bjarneo/pipe/internal/logger.Logger).Info
+      - (*github.com/bjarneo/pipe/internal/logger.Logger).Error
+      - (*github.com/bjarneo/pipe/internal/logger.Logger).Step
+      - (*github.com/bjarneo/pipe/internal/logger.Logger).StepProgress
+      - (*github.com/bjarneo/pipe/internal/logger.Logger).Close
+
+issues:
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+
+run:
+  timeout: 5m
