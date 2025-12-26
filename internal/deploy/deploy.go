@@ -1,6 +1,7 @@
 package deploy
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -13,6 +14,11 @@ import (
 
 // Deploy performs the main deployment process
 func Deploy(cfg *config.Config, log *logger.Logger) error {
+	return DeployWithContext(context.Background(), cfg, log)
+}
+
+// DeployWithContext performs the main deployment process with context support
+func DeployWithContext(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	// Enable quiet mode for JSON output
 	if cfg.JSONOutput {
 		log.SetQuiet(true)
@@ -35,21 +41,21 @@ func Deploy(cfg *config.Config, log *logger.Logger) error {
 	}
 
 	// Preliminary checks (silent, not counted as a step)
-	if err := docker.Check(cfg, log); err != nil {
+	if err := docker.Check(ctx, cfg, log); err != nil {
 		return err
 	}
-	if err := ssh.Check(cfg, log); err != nil {
+	if err := ssh.CheckContext(ctx, cfg, log); err != nil {
 		return err
 	}
 
 	// Build Docker image
-	if err := docker.Build(cfg, log); err != nil {
+	if err := docker.Build(ctx, cfg, log); err != nil {
 		return err
 	}
 	log.StepProgress(1, 4, "Building image", "done")
 
 	// Transfer Docker image
-	transferResult, err := docker.Transfer(cfg, log, st)
+	transferResult, err := docker.Transfer(ctx, cfg, log, st)
 	if err != nil {
 		return err
 	}
@@ -58,20 +64,20 @@ func Deploy(cfg *config.Config, log *logger.Logger) error {
 
 	// Copy environment file if it exists (silent step)
 	if cfg.EnvFile != "" {
-		if err := copyEnvFile(cfg, log); err != nil {
+		if err := copyEnvFile(ctx, cfg, log); err != nil {
 			return err
 		}
 	}
 
 	// Deploy container
-	if err := docker.Deploy(cfg, log); err != nil {
+	if err := docker.Deploy(ctx, cfg, log); err != nil {
 		return err
 	}
 	log.StepProgress(4, 4, "Starting container", "running")
 
 	// Execute remote commands if specified (silent step)
 	if len(cfg.RemoteCommands) > 0 {
-		if err := executeRemoteCommands(cfg, log); err != nil {
+		if err := executeRemoteCommands(ctx, cfg, log); err != nil {
 			return err
 		}
 	}
@@ -146,10 +152,10 @@ func printDryRunSummary(cfg *config.Config, log *logger.Logger) error {
 }
 
 // getCurrentContainerImage retrieves the image used by the current container
-func getCurrentContainerImage(cfg *config.Config, log *logger.Logger) (string, error) {
+func getCurrentContainerImage(ctx context.Context, cfg *config.Config, log *logger.Logger) (string, error) {
 	cmd := fmt.Sprintf("%s \"docker inspect --format='{{.Config.Image}}' %s\"",
 		ssh.GetCommand(cfg), cfg.ContainerName)
-	result, err := ssh.ExecuteCommand(log, cmd, "Getting current container information")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Getting current container information")
 	if err != nil {
 		return "", fmt.Errorf("failed to get current container information: %w", err)
 	}
@@ -157,10 +163,10 @@ func getCurrentContainerImage(cfg *config.Config, log *logger.Logger) (string, e
 }
 
 // getImageHistory retrieves the list of images sorted by creation time
-func getImageHistory(cfg *config.Config, log *logger.Logger) ([]string, error) {
+func getImageHistory(ctx context.Context, cfg *config.Config, log *logger.Logger) ([]string, error) {
 	cmd := fmt.Sprintf("%s \"docker images %s --format '{{.Repository}}:{{.Tag}}___{{.CreatedAt}}' | sort -k2 -r\"",
 		ssh.GetCommand(cfg), cfg.Image)
-	result, err := ssh.ExecuteCommand(log, cmd, "Getting image history")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Getting image history")
 	if err != nil {
 		return nil, fmt.Errorf("failed to get image history: %w", err)
 	}
@@ -190,10 +196,10 @@ func findPreviousImage(images []string, currentImage string) (string, error) {
 }
 
 // verifyContainerRunning checks if a container is running
-func verifyContainerRunning(cfg *config.Config, log *logger.Logger) (bool, error) {
+func verifyContainerRunning(ctx context.Context, cfg *config.Config, log *logger.Logger) (bool, error) {
 	cmd := fmt.Sprintf("%s \"docker ps --filter name=%s --format '{{.Status}}'\"",
 		ssh.GetCommand(cfg), cfg.ContainerName)
-	result, err := ssh.ExecuteCommand(log, cmd, "Verifying container status")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Verifying container status")
 	if err != nil {
 		return false, err
 	}
@@ -201,13 +207,18 @@ func verifyContainerRunning(cfg *config.Config, log *logger.Logger) (bool, error
 }
 
 // cleanupBackupContainer removes the backup container
-func cleanupBackupContainer(cfg *config.Config, log *logger.Logger) {
+func cleanupBackupContainer(ctx context.Context, cfg *config.Config, log *logger.Logger) {
 	cmd := fmt.Sprintf("%s \"docker rm %s_backup\"", ssh.GetCommand(cfg), cfg.ContainerName)
-	_, _ = ssh.ExecuteCommand(log, cmd, "Cleaning up backup container")
+	_, _ = ssh.ExecuteCommandContext(ctx, log, cmd, "Cleaning up backup container")
 }
 
 // Rollback performs a rollback to the previous version
 func Rollback(cfg *config.Config, log *logger.Logger) error {
+	return RollbackWithContext(context.Background(), cfg, log)
+}
+
+// RollbackWithContext performs a rollback to the previous version with context support
+func RollbackWithContext(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	log.Step("Starting rollback")
 
 	// Validate configuration
@@ -217,19 +228,19 @@ func Rollback(cfg *config.Config, log *logger.Logger) error {
 
 	// Check SSH connection
 	log.Step("Checking SSH connectivity")
-	if err := ssh.Check(cfg, log); err != nil {
+	if err := ssh.CheckContext(ctx, cfg, log); err != nil {
 		return err
 	}
 
 	// Get current container image
 	log.Step("Finding previous version")
-	currentImage, err := getCurrentContainerImage(cfg, log)
+	currentImage, err := getCurrentContainerImage(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
 
 	// Get image history
-	images, err := getImageHistory(cfg, log)
+	images, err := getImageHistory(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
@@ -243,34 +254,34 @@ func Rollback(cfg *config.Config, log *logger.Logger) error {
 	log.Step(fmt.Sprintf("Rolling back to %s", previousImage))
 
 	// Perform the rollback
-	if err := performRollback(cfg, log, previousImage); err != nil {
+	if err := performRollback(ctx, cfg, log, previousImage); err != nil {
 		return err
 	}
 
 	// Clean up backup container
-	cleanupBackupContainer(cfg, log)
+	cleanupBackupContainer(ctx, cfg, log)
 
 	fmt.Println("Rollback completed successfully!")
 	return nil
 }
 
 // copyEnvFile copies the environment file to the remote host
-func copyEnvFile(cfg *config.Config, log *logger.Logger) error {
+func copyEnvFile(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	copyEnvCmd := fmt.Sprintf("%s %s %s@%s:~/%s",
 		ssh.GetSCPCommand(cfg), cfg.EnvFile, cfg.User, cfg.Host, cfg.EnvFile)
-	_, err := ssh.ExecuteCommand(log, copyEnvCmd, "Copying environment file to server")
+	_, err := ssh.ExecuteCommandContext(ctx, log, copyEnvCmd, "Copying environment file to server")
 	return err
 }
 
 // executeRemoteCommands runs custom commands on the remote host after deployment
-func executeRemoteCommands(cfg *config.Config, log *logger.Logger) error {
+func executeRemoteCommands(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	for i, cmd := range cfg.RemoteCommands {
 		if cmd == "" {
 			continue
 		}
 		remoteCmd := fmt.Sprintf("%s \"%s\"", ssh.GetCommand(cfg), cmd)
 		description := fmt.Sprintf("Executing remote command [%d/%d]: %s", i+1, len(cfg.RemoteCommands), cmd)
-		if _, err := ssh.ExecuteCommand(log, remoteCmd, description); err != nil {
+		if _, err := ssh.ExecuteCommandContext(ctx, log, remoteCmd, description); err != nil {
 			return fmt.Errorf("remote command failed: %w", err)
 		}
 	}
@@ -297,28 +308,28 @@ func buildRollbackCommands(cfg *config.Config, previousImage string) string {
 }
 
 // performRollback executes the rollback operation
-func performRollback(cfg *config.Config, log *logger.Logger, previousImage string) error {
+func performRollback(ctx context.Context, cfg *config.Config, log *logger.Logger, previousImage string) error {
 	rollbackCommands := buildRollbackCommands(cfg, previousImage)
 
 	// Execute rollback
 	rollbackCmd := fmt.Sprintf("%s \"%s\"", ssh.GetCommand(cfg), rollbackCommands)
-	if _, err := ssh.ExecuteCommand(log, rollbackCmd, "Rolling back to previous version"); err != nil {
+	if _, err := ssh.ExecuteCommandContext(ctx, log, rollbackCmd, "Rolling back to previous version"); err != nil {
 		// If rollback fails, attempt to restore the backup
-		if restoreErr := restoreBackup(cfg, log); restoreErr != nil {
+		if restoreErr := restoreBackup(ctx, cfg, log); restoreErr != nil {
 			return fmt.Errorf("rollback failed and restore failed: %w (original error: %v)", restoreErr, err)
 		}
 		return fmt.Errorf("rollback failed, restored previous version: %w", err)
 	}
 
 	// Verify new container is running
-	running, err := verifyContainerRunning(cfg, log)
+	running, err := verifyContainerRunning(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
 
 	if !running {
 		// If verification fails, attempt to restore the backup
-		if restoreErr := restoreBackup(cfg, log); restoreErr != nil {
+		if restoreErr := restoreBackup(ctx, cfg, log); restoreErr != nil {
 			return fmt.Errorf("rollback verification failed and restore failed: %w", restoreErr)
 		}
 		return fmt.Errorf("rollback verification failed, restored previous version")
@@ -328,10 +339,10 @@ func performRollback(cfg *config.Config, log *logger.Logger, previousImage strin
 }
 
 // restoreBackup attempts to restore the backup container
-func restoreBackup(cfg *config.Config, log *logger.Logger) error {
+func restoreBackup(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	restoreCmd := fmt.Sprintf("%s \"docker stop %s || true && docker rm %s || true && docker rename %s_backup %s && docker start %s\"",
 		ssh.GetCommand(cfg), cfg.ContainerName, cfg.ContainerName,
 		cfg.ContainerName, cfg.ContainerName, cfg.ContainerName)
-	_, err := ssh.ExecuteCommand(log, restoreCmd, "Restoring previous version after failed rollback")
+	_, err := ssh.ExecuteCommandContext(ctx, log, restoreCmd, "Restoring previous version after failed rollback")
 	return err
 } 

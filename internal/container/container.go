@@ -1,6 +1,7 @@
 package container
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -59,13 +60,18 @@ type StatsJSON struct {
 
 // GetStats retrieves container statistics from the remote host
 func GetStats(cfg *config.Config, log *logger.Logger) (*Stats, error) {
+	return GetStatsWithContext(context.Background(), cfg, log)
+}
+
+// GetStatsWithContext retrieves container statistics from the remote host with context support
+func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Logger) (*Stats, error) {
 	stats := &Stats{Name: cfg.ContainerName}
 
 	// Get container inspect data - health check is optional so we get it separately
 	inspectCmd := fmt.Sprintf(`%s 'docker inspect --format "{{.Id}}|{{.State.Status}}|{{.Config.Image}}|{{.Created}}|{{.RestartCount}}" %s'`,
 		ssh.GetCommand(cfg), cfg.ContainerName)
 
-	result, err := ssh.ExecuteCommand(log, inspectCmd, "Getting container info")
+	result, err := ssh.ExecuteCommandContext(ctx, log, inspectCmd, "Getting container info")
 	if err != nil {
 		return nil, fmt.Errorf("container '%s' not found on %s", cfg.ContainerName, cfg.Host)
 	}
@@ -82,13 +88,15 @@ func GetStats(cfg *config.Config, log *logger.Logger) (*Stats, error) {
 		stats.Image = parts[2]
 		stats.Created = formatCreatedTime(parts[3])
 		stats.Uptime = calculateUptime(parts[3])
-		stats.RestartCount, _ = parseInt(parts[4])
+		if restartCount, err := parseInt(parts[4]); err == nil {
+			stats.RestartCount = restartCount
+		}
 	}
 
 	// Get health status separately (may not exist)
 	healthCmd := fmt.Sprintf(`%s 'docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}" %s'`,
 		ssh.GetCommand(cfg), cfg.ContainerName)
-	if healthResult, err := ssh.ExecuteCommand(log, healthCmd, "Getting health status"); err == nil {
+	if healthResult, err := ssh.ExecuteCommandContext(ctx, log, healthCmd, "Getting health status"); err == nil {
 		stats.Health = strings.TrimSpace(healthResult.Stdout)
 		if stats.Health == "" {
 			stats.Health = "N/A"
@@ -99,7 +107,7 @@ func GetStats(cfg *config.Config, log *logger.Logger) (*Stats, error) {
 
 	// Get port mappings
 	portsCmd := fmt.Sprintf(`%s 'docker port %s'`, ssh.GetCommand(cfg), cfg.ContainerName)
-	if portResult, err := ssh.ExecuteCommand(log, portsCmd, "Getting port mappings"); err == nil {
+	if portResult, err := ssh.ExecuteCommandContext(ctx, log, portsCmd, "Getting port mappings"); err == nil {
 		stats.Ports = parsePortMappings(portResult.Stdout)
 	}
 
@@ -107,7 +115,7 @@ func GetStats(cfg *config.Config, log *logger.Logger) (*Stats, error) {
 	statsCmd := fmt.Sprintf(`%s 'docker stats --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}" %s'`,
 		ssh.GetCommand(cfg), cfg.ContainerName)
 
-	if statsResult, err := ssh.ExecuteCommand(log, statsCmd, "Getting container stats"); err == nil {
+	if statsResult, err := ssh.ExecuteCommandContext(ctx, log, statsCmd, "Getting container stats"); err == nil {
 		statsParts := strings.Split(strings.TrimSpace(statsResult.Stdout), "|")
 		if len(statsParts) >= 6 {
 			stats.CPUPercent = statsParts[0]

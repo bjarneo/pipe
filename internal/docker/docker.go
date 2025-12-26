@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"slices"
@@ -34,14 +35,14 @@ const compressionRatio = 0.4
 // =============================================================================
 
 // Check verifies Docker is installed and running locally and remotely
-func Check(cfg *config.Config, log *logger.Logger) error {
-	if _, err := ssh.ExecuteCommand(log, "docker info", "Checking local Docker"); err != nil {
-		return fmt.Errorf("local Docker check failed: %v", err)
+func Check(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
+	if _, err := ssh.ExecuteCommandContext(ctx, log, "docker info", "Checking local Docker"); err != nil {
+		return fmt.Errorf("local Docker check failed: %w", err)
 	}
 
 	remoteCmd := fmt.Sprintf("%s \"docker info\"", ssh.GetCommand(cfg))
-	if _, err := ssh.ExecuteCommand(log, remoteCmd, "Checking remote Docker"); err != nil {
-		return fmt.Errorf("remote Docker check failed - ensure Docker is installed on %s: %v", cfg.Host, err)
+	if _, err := ssh.ExecuteCommandContext(ctx, log, remoteCmd, "Checking remote Docker"); err != nil {
+		return fmt.Errorf("remote Docker check failed - ensure Docker is installed on %s: %w", cfg.Host, err)
 	}
 
 	return nil
@@ -52,13 +53,13 @@ func Check(cfg *config.Config, log *logger.Logger) error {
 // =============================================================================
 
 // Build builds the Docker image locally
-func Build(cfg *config.Config, log *logger.Logger) error {
+func Build(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	if _, err := os.Stat(cfg.Dockerfile); os.IsNotExist(err) {
 		return fmt.Errorf("%s not found", cfg.Dockerfile)
 	}
 
 	cmd := buildDockerBuildCmd(cfg)
-	_, err := ssh.ExecuteCommand(log, cmd, "Building Docker image")
+	_, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Building Docker image")
 	return err
 }
 
@@ -85,24 +86,24 @@ func imageRef(cfg *config.Config) string {
 // =============================================================================
 
 // Transfer transfers the Docker image to the remote host using delta transfer
-func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) (*TransferResult, error) {
+func Transfer(ctx context.Context, cfg *config.Config, log *logger.Logger, st *stats.Stats) (*TransferResult, error) {
 	ref := imageRef(cfg)
 	result := &TransferResult{}
 
 	// Get image size
-	if size := getImageSize(log, ref); size > 0 {
+	if size := getImageSize(ctx, log, ref); size > 0 {
 		st.SetImageSize(size)
 		result.ImageSize = size
 	}
 
 	// Get local layers
-	localLayers, err := getLocalLayers(log, ref)
+	localLayers, err := getLocalLayers(ctx, log, ref)
 	if err != nil || len(localLayers) == 0 {
-		return doFullTransfer(cfg, log, st, result, len(localLayers))
+		return doFullTransfer(ctx, cfg, log, st, result, len(localLayers))
 	}
 
 	// Get remote layers and calculate diff
-	remoteLayers := getRemoteLayers(cfg, log)
+	remoteLayers := getRemoteLayers(ctx, cfg, log)
 	newLayers, cachedLayers := calculateLayerDiff(localLayers, remoteLayers)
 
 	st.SetLayerStats(len(localLayers), cachedLayers, newLayers)
@@ -115,13 +116,13 @@ func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) (*Transfe
 		if len(remoteLayers) == 0 {
 			log.Info("First deployment - transferring all layers")
 		}
-		return doFullTransfer(cfg, log, st, result, len(localLayers))
+		return doFullTransfer(ctx, cfg, log, st, result, len(localLayers))
 	}
 
 	// Delta transfer
 	logLayerStats(log, cachedLayers, len(localLayers), newLayers)
 
-	if err := deltaTransfer(cfg, log, st, ref, localLayers, remoteLayers); err != nil {
+	if err := deltaTransfer(ctx, cfg, log, st, ref, localLayers, remoteLayers); err != nil {
 		return nil, err
 	}
 	result.TransferredBytes = st.TransferredBytes
@@ -129,8 +130,8 @@ func Transfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) (*Transfe
 }
 
 // doFullTransfer performs a full image transfer
-func doFullTransfer(cfg *config.Config, log *logger.Logger, st *stats.Stats, result *TransferResult, layerCount int) (*TransferResult, error) {
-	if err := fullTransfer(cfg, log, st); err != nil {
+func doFullTransfer(ctx context.Context, cfg *config.Config, log *logger.Logger, st *stats.Stats, result *TransferResult, layerCount int) (*TransferResult, error) {
+	if err := fullTransfer(ctx, cfg, log, st); err != nil {
 		return nil, err
 	}
 	result.TransferredBytes = st.TransferredBytes
@@ -152,20 +153,24 @@ func logLayerStats(log *logger.Logger, cached, total, new int) {
 }
 
 // getImageSize retrieves the image size in bytes
-func getImageSize(log *logger.Logger, ref string) int64 {
+func getImageSize(ctx context.Context, log *logger.Logger, ref string) int64 {
 	cmd := fmt.Sprintf("docker image inspect %s --format='{{.Size}}'", ref)
-	result, err := ssh.ExecuteCommand(log, cmd, "Getting image size")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Getting image size")
 	if err != nil {
 		return 0
 	}
-	size, _ := strconv.ParseInt(strings.TrimSpace(result.Stdout), 10, 64)
+	size, err := strconv.ParseInt(strings.TrimSpace(result.Stdout), 10, 64)
+	if err != nil {
+		log.Info(fmt.Sprintf("Failed to parse image size: %v", err))
+		return 0
+	}
 	return size
 }
 
 // getLocalLayers retrieves the layer IDs from the local image
-func getLocalLayers(log *logger.Logger, ref string) ([]string, error) {
+func getLocalLayers(ctx context.Context, log *logger.Logger, ref string) ([]string, error) {
 	cmd := fmt.Sprintf("docker inspect --format='{{range .RootFS.Layers}}{{.}}\n{{end}}' %s", ref)
-	result, err := ssh.ExecuteCommand(log, cmd, "Getting local image layers")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Getting local image layers")
 	if err != nil {
 		return nil, err
 	}
@@ -173,14 +178,18 @@ func getLocalLayers(log *logger.Logger, ref string) ([]string, error) {
 }
 
 // getRemoteLayers retrieves cached layer IDs from the remote host
-func getRemoteLayers(cfg *config.Config, log *logger.Logger) map[string]bool {
+func getRemoteLayers(ctx context.Context, cfg *config.Config, log *logger.Logger) map[string]bool {
 	cmd := fmt.Sprintf(
 		"%s \"docker images -q '%s' 2>/dev/null | xargs -r docker inspect --format='{{range .RootFS.Layers}}{{.}} {{end}}' 2>/dev/null | tr ' ' '\\n' | grep -v '^$' | sort -u\"",
 		ssh.GetCommand(cfg), cfg.Image)
 
-	result, _ := ssh.ExecuteCommand(log, cmd, "Getting remote image layers")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Getting remote image layers")
 
 	layers := make(map[string]bool)
+	if err != nil {
+		// No remote layers available (first deployment or connection issue)
+		return layers
+	}
 	for _, layer := range parseLayerList(result.Stdout) {
 		layers[layer] = true
 	}
@@ -216,18 +225,18 @@ func parseLayerList(output string) []string {
 // =============================================================================
 
 // fullTransfer transfers the entire Docker image
-func fullTransfer(cfg *config.Config, log *logger.Logger, st *stats.Stats) error {
+func fullTransfer(ctx context.Context, cfg *config.Config, log *logger.Logger, st *stats.Stats) error {
 	ref := imageRef(cfg)
 	sshCmd := ssh.GetCommand(cfg)
 
 	// Try with pv for progress monitoring
 	cmd := fmt.Sprintf("docker save %s | gzip | pv -f 2>&1 | %s docker load", ref, sshCmd)
-	result, err := ssh.ExecuteCommand(log, cmd, "Transferring Docker image")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Transferring Docker image")
 
 	if err != nil {
 		// Fallback without pv
 		cmd = fmt.Sprintf("docker save %s | gzip | %s docker load", ref, sshCmd)
-		if _, err := ssh.ExecuteCommand(log, cmd, "Transferring Docker image"); err != nil {
+		if _, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Transferring Docker image"); err != nil {
 			return err
 		}
 		estimateTransferSize(st)
@@ -259,14 +268,14 @@ func parseAndSetTransferSize(st *stats.Stats, output string) {
 // =============================================================================
 
 // deltaTransfer transfers only new layers by emptying cached layer tarballs
-func deltaTransfer(cfg *config.Config, log *logger.Logger, st *stats.Stats, ref string, localLayers []string, remoteLayers map[string]bool) error {
+func deltaTransfer(ctx context.Context, cfg *config.Config, log *logger.Logger, st *stats.Stats, ref string, localLayers []string, remoteLayers map[string]bool) error {
 	cachedPrefixes := getCachedLayerPrefixes(localLayers, remoteLayers)
 	script := buildDeltaTransferScript(ref, cachedPrefixes, ssh.GetCommand(cfg))
 
-	result, err := ssh.ExecuteCommand(log, script, "Transferring changed layers only")
+	result, err := ssh.ExecuteCommandContext(ctx, log, script, "Transferring changed layers only")
 	if err != nil {
 		log.Info("Delta transfer failed, falling back to full transfer")
-		return fullTransfer(cfg, log, st)
+		return fullTransfer(ctx, cfg, log, st)
 	}
 
 	if size := parseTransferSize(result.Stdout); size > 0 {
@@ -383,7 +392,7 @@ func sizeMultiplier(unit string) int64 {
 // =============================================================================
 
 // Deploy deploys the container on the remote host
-func Deploy(cfg *config.Config, log *logger.Logger) error {
+func Deploy(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	containerArgs := NewRunBuilder(cfg).Build()
 
 	commands := []string{
@@ -393,23 +402,23 @@ func Deploy(cfg *config.Config, log *logger.Logger) error {
 	}
 
 	cmd := fmt.Sprintf("%s \"%s\"", ssh.GetCommand(cfg), strings.Join(commands, " && "))
-	if _, err := ssh.ExecuteCommand(log, cmd, "Starting container"); err != nil {
+	if _, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Starting container"); err != nil {
 		return err
 	}
 
-	if err := cleanupOldReleases(cfg, log); err != nil {
+	if err := cleanupOldReleases(ctx, cfg, log); err != nil {
 		log.Info(fmt.Sprintf("failed to cleanup old releases: %v", err))
 	}
 
-	return verifyContainer(cfg, log)
+	return verifyContainer(ctx, cfg, log)
 }
 
 // cleanupOldReleases ensures only the last 5 releases are kept
-func cleanupOldReleases(cfg *config.Config, log *logger.Logger) error {
+func cleanupOldReleases(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	cmd := fmt.Sprintf("%s \"docker images '%s' --format '{{.Tag}}'\"",
 		ssh.GetCommand(cfg), cfg.Image)
 
-	result, err := ssh.ExecuteCommand(log, cmd, "Listing existing releases")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Listing existing releases")
 	if err != nil {
 		return err
 	}
@@ -425,7 +434,7 @@ func cleanupOldReleases(cfg *config.Config, log *logger.Logger) error {
 			continue
 		}
 		removeCmd := fmt.Sprintf("%s \"docker rmi %s:%s\"", ssh.GetCommand(cfg), cfg.Image, tag)
-		if _, err := ssh.ExecuteCommand(log, removeCmd, fmt.Sprintf("Removing old release %s", tag)); err != nil {
+		if _, err := ssh.ExecuteCommandContext(ctx, log, removeCmd, fmt.Sprintf("Removing old release %s", tag)); err != nil {
 			log.Info(fmt.Sprintf("Failed to remove old release %s: %v", tag, err))
 		}
 	}
@@ -434,11 +443,11 @@ func cleanupOldReleases(cfg *config.Config, log *logger.Logger) error {
 }
 
 // verifyContainer verifies that the container is running
-func verifyContainer(cfg *config.Config, log *logger.Logger) error {
+func verifyContainer(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	cmd := fmt.Sprintf("%s \"docker ps --filter name=%s --format '{{.Status}}'\"",
 		ssh.GetCommand(cfg), cfg.ContainerName)
 
-	result, err := ssh.ExecuteCommand(log, cmd, "Verifying container status")
+	result, err := ssh.ExecuteCommandContext(ctx, log, cmd, "Verifying container status")
 	if err != nil {
 		return err
 	}
