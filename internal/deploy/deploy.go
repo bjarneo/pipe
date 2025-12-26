@@ -290,19 +290,16 @@ func executeRemoteCommands(ctx context.Context, cfg *config.Config, log *logger.
 
 // buildRollbackCommands creates the command string for rollback operation
 func buildRollbackCommands(cfg *config.Config, previousImage string) string {
-	envFileFlag := ""
-	if cfg.EnvFile != "" {
-		envFileFlag = fmt.Sprintf("--env-file ~/%s", cfg.EnvFile)
-	}
+	// Use the full RunBuilder to preserve all container configuration
+	// (volumes, labels, capabilities, health checks, etc.)
+	containerArgs := docker.NewRunBuilder(cfg).BuildWithImage(previousImage)
 
 	commands := []string{
 		// Stop and rename current container (for backup)
 		fmt.Sprintf("docker stop %s", cfg.ContainerName),
 		fmt.Sprintf("docker rename %s %s_backup", cfg.ContainerName, cfg.ContainerName),
-		// Start container with previous version
-		fmt.Sprintf("docker run -d --name %s --restart unless-stopped -p %s:%s %s %s",
-			cfg.ContainerName, cfg.HostPort, cfg.ContainerPort,
-			envFileFlag, previousImage),
+		// Start container with previous version using full configuration
+		fmt.Sprintf("docker run %s", strings.Join(containerArgs, " ")),
 	}
 	return strings.Join(commands, " && ")
 }

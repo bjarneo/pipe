@@ -488,6 +488,12 @@ func NewRunBuilder(cfg *config.Config) *RunBuilder {
 
 // Build constructs and returns all docker run arguments
 func (b *RunBuilder) Build() []string {
+	return b.BuildWithImage(imageRef(b.cfg))
+}
+
+// BuildWithImage constructs docker run arguments with a custom image
+// This is useful for rollback operations where we need to use a previous image
+func (b *RunBuilder) BuildWithImage(image string) []string {
 	b.addCore()
 	b.addNetwork()
 	b.addResources()
@@ -500,7 +506,7 @@ func (b *RunBuilder) Build() []string {
 	b.addStorage()
 	b.addLogging()
 	b.addOverrides()
-	b.addImage()
+	b.addImageWithRef(image)
 	return b.args
 }
 
@@ -638,7 +644,12 @@ func (b *RunBuilder) addOverrides() {
 
 // addImage adds the image reference and optional command
 func (b *RunBuilder) addImage() {
-	b.args = append(b.args, imageRef(b.cfg))
+	b.addImageWithRef(imageRef(b.cfg))
+}
+
+// addImageWithRef adds a custom image reference and optional command
+func (b *RunBuilder) addImageWithRef(image string) {
+	b.args = append(b.args, image)
 	if b.cfg.Command != "" {
 		b.args = append(b.args, b.cfg.Command)
 	}
