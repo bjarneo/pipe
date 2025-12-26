@@ -243,67 +243,6 @@ func TestColorizeHealth(t *testing.T) {
 	}
 }
 
-func TestCenterText(t *testing.T) {
-	tests := []struct {
-		name     string
-		text     string
-		width    int
-		expected string
-	}{
-		{"short text", "Hi", 10, "    Hi    "},
-		{"exact width", "Hello", 5, "Hello"},
-		{"longer than width", "Hello World", 5, "Hello"},
-		{"empty text", "", 10, "          "},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := centerText(tt.text, tt.width)
-			if result != tt.expected {
-				t.Errorf("centerText(%q, %d) = %q, want %q", tt.text, tt.width, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestPadRight(t *testing.T) {
-	tests := []struct {
-		name     string
-		text     string
-		width    int
-		expected string
-	}{
-		{"short text", "Hi", 10, "Hi        "},
-		{"exact width", "Hello", 5, "Hello"},
-		{"longer than width", "Hello World", 5, "Hello World"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := padRight(tt.text, tt.width)
-			if result != tt.expected {
-				t.Errorf("padRight(%q, %d) = %q, want %q", tt.text, tt.width, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestPadRight_WithEmoji(t *testing.T) {
-	// Emojis take 2 terminal columns
-	text := "🟢 running"
-	width := 15
-
-	result := padRight(text, width)
-	// The emoji counts as 2 in display width, so we need less padding
-	// "🟢 running" = 2 + 1 + 7 = 10 display chars, need 5 spaces for width 15
-	expectedPadding := 5
-	actualPadding := len(result) - len(text)
-
-	if actualPadding != expectedPadding {
-		t.Errorf("padRight with emoji: got %d padding chars, want %d", actualPadding, expectedPadding)
-	}
-}
-
 func TestStats_ToJSON(t *testing.T) {
 	s := &Stats{
 		Name:         "testcontainer",

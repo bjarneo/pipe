@@ -10,13 +10,10 @@ import (
 	"github.com/bjarneo/pipe/internal/logger"
 )
 
-// defaultLogFile is the default filename for deployment logs
-const defaultLogFile = "deploy.log"
-
 func main() {
 	cfg := config.Load()
 
-	log := initLogger(cfg.Verbose)
+	log := initLogger(cfg.LogFile, cfg.Verbose)
 	defer log.Close()
 
 	if cfg.ShowStats {
@@ -37,8 +34,8 @@ func main() {
 	}
 }
 
-func initLogger(verbose bool) *logger.Logger {
-	log, err := logger.New(defaultLogFile, verbose)
+func initLogger(logFile string, verbose bool) *logger.Logger {
+	log, err := logger.New(logFile, verbose)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "FATAL: Failed to initialize logger: %v\n", err)
 		os.Exit(1)

@@ -256,51 +256,6 @@ func TestStats_ToJSON_ZeroImageSize(t *testing.T) {
 	}
 }
 
-func TestCenterText(t *testing.T) {
-	tests := []struct {
-		name     string
-		text     string
-		width    int
-		expected string
-	}{
-		{"short text", "Hi", 10, "    Hi    "},
-		{"exact width", "Hello", 5, "Hello"},
-		{"longer than width", "Hello World", 5, "Hello"},
-		{"odd padding", "Hi", 9, "   Hi    "},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := centerText(tt.text, tt.width)
-			if result != tt.expected {
-				t.Errorf("centerText(%q, %d) = %q, want %q", tt.text, tt.width, result, tt.expected)
-			}
-		})
-	}
-}
-
-func TestPadRight(t *testing.T) {
-	tests := []struct {
-		name     string
-		text     string
-		width    int
-		expected string
-	}{
-		{"short text", "Hi", 10, "Hi        "},
-		{"exact width", "Hello", 5, "Hello"},
-		{"longer than width", "Hello World", 5, "Hello"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := padRight(tt.text, tt.width)
-			if result != tt.expected {
-				t.Errorf("padRight(%q, %d) = %q, want %q", tt.text, tt.width, result, tt.expected)
-			}
-		})
-	}
-}
-
 func TestJSONOutputStructure(t *testing.T) {
 	// Test that JSONOutput can be marshaled and unmarshaled
 	output := JSONOutput{}

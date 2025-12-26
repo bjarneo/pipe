@@ -62,10 +62,11 @@ type Config struct {
 	LogOpts       map[string]string `json:"logOpts" yaml:"logOpts"`
 
 	// Execution options
-	DryRun     bool `json:"dryRun" yaml:"dryRun"`
-	Verbose    bool `json:"verbose" yaml:"verbose"`
-	JSONOutput bool `json:"jsonOutput" yaml:"jsonOutput"`
-	ShowStats  bool `json:"showStats" yaml:"showStats"`
+	DryRun     bool   `json:"dryRun" yaml:"dryRun"`
+	Verbose    bool   `json:"verbose" yaml:"verbose"`
+	JSONOutput bool   `json:"jsonOutput" yaml:"jsonOutput"`
+	ShowStats  bool   `json:"showStats" yaml:"showStats"`
+	LogFile    string `json:"logFile" yaml:"logFile"`
 }
 
 // arrayFlags allows for multiple flag values
@@ -185,6 +186,7 @@ func defineFlags(cfg *Config, flags *flagSet) {
 	// Logging flags
 	flag.StringVar(&cfg.LogDriver, "log-driver", "", "Logging driver (e.g., json-file, syslog, none)")
 	flag.Var(&flags.logOptFlags, "log-opt", "Log driver options in KEY=VALUE format")
+	flag.StringVar(&cfg.LogFile, "log-file", "", "Path to log file (default: deploy.log)")
 
 	// Execution flags
 	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Preview deployment without executing")
@@ -741,6 +743,7 @@ var envMapping = map[string]string{
 	"Workdir":        "WORKDIR",
 	"Hostname":       "CONTAINER_HOSTNAME",
 	"LogDriver":      "LOG_DRIVER",
+	"LogFile":        "LOG_FILE",
 }
 
 // defaultValues defines default values for config fields
@@ -754,6 +757,7 @@ var defaultValues = map[string]string{
 	"ContainerPort": "3000",
 	"HostPort":      "3000",
 	"RestartPolicy": "unless-stopped",
+	"LogFile":       "deploy.log",
 }
 
 // mergeConfig merges configuration from file, environment variables, and CLI flags

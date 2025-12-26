@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/bjarneo/pipe/internal/format"
 )
 
 // Display and formatting constants
@@ -164,7 +166,7 @@ func (s *Stats) ToJSON() (string, error) {
 	output.Timing.Duration = FormatDuration(s.Duration())
 	output.Success = true
 
-	jsonBytes, err := json.Marshal(output)
+	jsonBytes, err := json.MarshalIndent(output, "", "  ")
 	if err != nil {
 		return "", err
 	}
@@ -181,37 +183,37 @@ func (s *Stats) PrintSummary() {
 
 	fmt.Println()
 	fmt.Printf("╔%s╗\n", doubleLine)
-	fmt.Printf("║%s║\n", centerText("DEPLOYMENT SUMMARY", width))
+	fmt.Printf("║%s║\n", format.CenterText("DEPLOYMENT SUMMARY", width))
 	fmt.Printf("╠%s╣\n", doubleLine)
 
 	// Image info
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Image: %s:%s", s.ImageName, s.ImageTag), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Container: %s", s.ContainerName), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Host: %s", s.Host), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Image: %s:%s", s.ImageName, s.ImageTag), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Container: %s", s.ContainerName), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Host: %s", s.Host), width))
 
 	fmt.Printf("╟%s╢\n", line)
 
 	// Transfer stats
-	fmt.Printf("║%s║\n", centerText("Transfer Statistics", width))
+	fmt.Printf("║%s║\n", format.CenterText("Transfer Statistics", width))
 	fmt.Printf("╟%s╢\n", line)
 
 	if s.TotalLayers > 0 {
 		cachePercent := float64(s.CachedLayers) / float64(s.TotalLayers) * 100
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Total Layers: %d", s.TotalLayers), width))
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Cached Layers: %d (%.0f%%)", s.CachedLayers, cachePercent), width))
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  New Layers: %d", s.NewLayers), width))
+		fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Total Layers: %d", s.TotalLayers), width))
+		fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Cached Layers: %d (%.0f%%)", s.CachedLayers, cachePercent), width))
+		fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  New Layers: %d", s.NewLayers), width))
 	}
 
 	if s.ImageSize > 0 {
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Image Size: %s", FormatBytes(s.ImageSize)), width))
+		fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Image Size: %s", FormatBytes(s.ImageSize)), width))
 	}
 
 	if s.TransferredBytes > 0 {
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Data Transferred: %s", FormatBytes(s.TransferredBytes)), width))
+		fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Data Transferred: %s", FormatBytes(s.TransferredBytes)), width))
 		if s.ImageSize > 0 {
 			savings := float64(s.ImageSize-s.TransferredBytes) / float64(s.ImageSize) * 100
 			if savings > 0 {
-				fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Bandwidth Saved: %.1f%%", savings), width))
+				fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Bandwidth Saved: %.1f%%", savings), width))
 			}
 		}
 	}
@@ -219,28 +221,11 @@ func (s *Stats) PrintSummary() {
 	fmt.Printf("╟%s╢\n", line)
 
 	// Time stats
-	fmt.Printf("║%s║\n", centerText("Timing", width))
+	fmt.Printf("║%s║\n", format.CenterText("Timing", width))
 	fmt.Printf("╟%s╢\n", line)
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Duration: %s", FormatDuration(s.Duration())), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Completed: %s", s.EndTime.Format("15:04:05")), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Duration: %s", FormatDuration(s.Duration())), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Completed: %s", s.EndTime.Format("15:04:05")), width))
 
 	fmt.Printf("╚%s╝\n", doubleLine)
 	fmt.Println()
-}
-
-// centerText centers text within a given width
-func centerText(text string, width int) string {
-	if len(text) >= width {
-		return text[:width]
-	}
-	padding := (width - len(text)) / 2
-	return strings.Repeat(" ", padding) + text + strings.Repeat(" ", width-len(text)-padding)
-}
-
-// padRight pads text to the right to fill width
-func padRight(text string, width int) string {
-	if len(text) >= width {
-		return text[:width]
-	}
-	return text + strings.Repeat(" ", width-len(text))
 }

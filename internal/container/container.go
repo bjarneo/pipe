@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/bjarneo/pipe/internal/config"
+	"github.com/bjarneo/pipe/internal/format"
 	"github.com/bjarneo/pipe/internal/logger"
 	"github.com/bjarneo/pipe/internal/ssh"
 )
@@ -173,51 +174,51 @@ func (s *Stats) PrintStats() {
 
 	fmt.Println()
 	fmt.Printf("╔%s╗\n", doubleLine)
-	fmt.Printf("║%s║\n", centerText("CONTAINER STATS", width))
+	fmt.Printf("║%s║\n", format.CenterText("CONTAINER STATS", width))
 	fmt.Printf("╠%s╣\n", doubleLine)
 
 	// Container info
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Name: %s", s.Name), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  ID: %s", s.ID), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Image: %s", s.Image), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Status: %s", colorizeStatus(s.Status)), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Name: %s", s.Name), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  ID: %s", s.ID), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Image: %s", s.Image), width))
+	fmt.Printf("║%s║\n", format.PadRightWithEmoji(fmt.Sprintf("  Status: %s", colorizeStatus(s.Status)), width))
 	if s.Health != "N/A" {
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Health: %s", colorizeHealth(s.Health)), width))
+		fmt.Printf("║%s║\n", format.PadRightWithEmoji(fmt.Sprintf("  Health: %s", colorizeHealth(s.Health)), width))
 	}
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Created: %s", s.Created), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Uptime: %s", s.Uptime), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Created: %s", s.Created), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Uptime: %s", s.Uptime), width))
 	if s.RestartCount > 0 {
-		fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Restarts: %d", s.RestartCount), width))
+		fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Restarts: %d", s.RestartCount), width))
 	}
 
 	fmt.Printf("╟%s╢\n", line)
 
 	// Resource usage
-	fmt.Printf("║%s║\n", centerText("Resource Usage", width))
+	fmt.Printf("║%s║\n", format.CenterText("Resource Usage", width))
 	fmt.Printf("╟%s╢\n", line)
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  CPU: %s", s.CPUPercent), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Memory: %s (%s)", s.MemUsage, s.MemPercent), width))
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  PIDs: %s", s.PIDs), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  CPU: %s", s.CPUPercent), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Memory: %s (%s)", s.MemUsage, s.MemPercent), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  PIDs: %s", s.PIDs), width))
 
 	fmt.Printf("╟%s╢\n", line)
 
 	// Network
-	fmt.Printf("║%s║\n", centerText("Network", width))
+	fmt.Printf("║%s║\n", format.CenterText("Network", width))
 	fmt.Printf("╟%s╢\n", line)
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  I/O: %s", s.NetIO), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  I/O: %s", s.NetIO), width))
 	if len(s.Ports) > 0 {
-		fmt.Printf("║%s║\n", padRight("  Ports:", width))
+		fmt.Printf("║%s║\n", format.PadRight("  Ports:", width))
 		for _, port := range s.Ports {
-			fmt.Printf("║%s║\n", padRight(fmt.Sprintf("    %s", port), width))
+			fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("    %s", port), width))
 		}
 	}
 
 	fmt.Printf("╟%s╢\n", line)
 
 	// Storage
-	fmt.Printf("║%s║\n", centerText("Storage", width))
+	fmt.Printf("║%s║\n", format.CenterText("Storage", width))
 	fmt.Printf("╟%s╢\n", line)
-	fmt.Printf("║%s║\n", padRight(fmt.Sprintf("  Block I/O: %s", s.BlockIO), width))
+	fmt.Printf("║%s║\n", format.PadRight(fmt.Sprintf("  Block I/O: %s", s.BlockIO), width))
 
 	fmt.Printf("╚%s╝\n", doubleLine)
 	fmt.Println()
@@ -301,27 +302,3 @@ func colorizeHealth(health string) string {
 	}
 }
 
-func centerText(text string, width int) string {
-	if len(text) >= width {
-		return text[:width]
-	}
-	padding := (width - len(text)) / 2
-	return strings.Repeat(" ", padding) + text + strings.Repeat(" ", width-len(text)-padding)
-}
-
-func padRight(text string, width int) string {
-	// Calculate display width - emojis take 2 terminal columns
-	displayLen := 0
-	for _, r := range text {
-		if r == '🟢' || r == '🔴' || r == '🟡' {
-			displayLen += 2
-		} else {
-			displayLen += 1
-		}
-	}
-
-	if displayLen >= width {
-		return text
-	}
-	return text + strings.Repeat(" ", width-displayLen)
-}
