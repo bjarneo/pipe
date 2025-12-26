@@ -9,8 +9,6 @@ import (
 
 // File permission constants
 const (
-	// logFilePermissions restricts log file access to owner only (read/write)
-	// to prevent other users from reading potentially sensitive deployment logs
 	logFilePermissions = 0600
 )
 
@@ -37,7 +35,6 @@ type Logger struct {
 // Ensure Logger implements Interface
 var _ Interface = (*Logger)(nil)
 
-// New creates a new logger instance that writes to a file
 func New(filename string, verbose bool) (*Logger, error) {
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, logFilePermissions)
 	if err != nil {
@@ -46,20 +43,17 @@ func New(filename string, verbose bool) (*Logger, error) {
 	return &Logger{writer: file, file: file, verbose: verbose}, nil
 }
 
-// NewWithWriter creates a new logger instance that writes to any io.Writer
-// Useful for testing or custom output destinations
+// NewWithWriter creates a new logger that writes to any io.Writer (useful for testing)
 func NewWithWriter(w io.Writer, verbose bool) *Logger {
 	return &Logger{writer: w, file: nil, verbose: verbose}
 }
 
-// SetQuiet enables or disables quiet mode (suppresses console output)
 func (l *Logger) SetQuiet(quiet bool) {
 	if l != nil {
 		l.quiet = quiet
 	}
 }
 
-// Step logs a deployment step (always shown unless quiet)
 func (l *Logger) Step(message string) error {
 	if l == nil || l.writer == nil {
 		return nil
@@ -73,7 +67,6 @@ func (l *Logger) Step(message string) error {
 	return err
 }
 
-// StepProgress logs a numbered deployment step with status
 func (l *Logger) StepProgress(stepNum, total int, action, status string) error {
 	if l == nil || l.writer == nil {
 		return nil
@@ -87,7 +80,6 @@ func (l *Logger) StepProgress(stepNum, total int, action, status string) error {
 	return err
 }
 
-// Info logs an informational message (only in verbose mode on console)
 func (l *Logger) Info(message string) error {
 	if l == nil || l.writer == nil {
 		return nil
@@ -101,7 +93,6 @@ func (l *Logger) Info(message string) error {
 	return err
 }
 
-// Debug logs a debug message (only in verbose mode)
 func (l *Logger) Debug(message string) error {
 	if l == nil || l.writer == nil {
 		return nil
@@ -115,7 +106,6 @@ func (l *Logger) Debug(message string) error {
 	return err
 }
 
-// Error logs an error message
 func (l *Logger) Error(message string, err error) error {
 	if l == nil || l.writer == nil {
 		return nil
@@ -134,7 +124,6 @@ func (l *Logger) Error(message string, err error) error {
 	return writeErr
 }
 
-// Fatal logs a fatal error message and exits the program
 func (l *Logger) Fatal(err error) {
 	timestamp := time.Now().UTC().Format(time.RFC3339)
 	logMessage := fmt.Sprintf("[%s] FATAL: %s\n", timestamp, err.Error())
@@ -150,12 +139,10 @@ func (l *Logger) Fatal(err error) {
 	os.Exit(1)
 }
 
-// IsVerbose returns whether verbose mode is enabled
 func (l *Logger) IsVerbose() bool {
 	return l != nil && l.verbose
 }
 
-// Close closes the log file if one was opened
 func (l *Logger) Close() error {
 	if l == nil || l.file == nil {
 		return nil

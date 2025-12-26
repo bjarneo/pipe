@@ -33,48 +33,40 @@ type Stats struct {
 	Host             string
 }
 
-// New creates a new Stats instance
 func New() *Stats {
 	return &Stats{
 		StartTime: time.Now(),
 	}
 }
 
-// SetImageInfo sets the image information
 func (s *Stats) SetImageInfo(name, tag string) {
 	s.ImageName = name
 	s.ImageTag = tag
 }
 
-// SetContainerInfo sets container and host information
 func (s *Stats) SetContainerInfo(containerName, host string) {
 	s.ContainerName = containerName
 	s.Host = host
 }
 
-// SetLayerStats sets layer statistics
 func (s *Stats) SetLayerStats(total, cached, new int) {
 	s.TotalLayers = total
 	s.CachedLayers = cached
 	s.NewLayers = new
 }
 
-// SetImageSize sets the image size in bytes
 func (s *Stats) SetImageSize(size int64) {
 	s.ImageSize = size
 }
 
-// SetTransferredBytes sets the actual bytes transferred
 func (s *Stats) SetTransferredBytes(bytes int64) {
 	s.TransferredBytes = bytes
 }
 
-// Finish marks the end of the deployment
 func (s *Stats) Finish() {
 	s.EndTime = time.Now()
 }
 
-// Duration returns the deployment duration
 func (s *Stats) Duration() time.Duration {
 	if s.EndTime.IsZero() {
 		return time.Since(s.StartTime)
@@ -82,7 +74,6 @@ func (s *Stats) Duration() time.Duration {
 	return s.EndTime.Sub(s.StartTime)
 }
 
-// FormatBytes formats bytes into human readable format
 func FormatBytes(bytes int64) string {
 	if bytes < bytesPerKilobyte {
 		return fmt.Sprintf("%d B", bytes)
@@ -95,7 +86,6 @@ func FormatBytes(bytes int64) string {
 	return fmt.Sprintf("%.2f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
 }
 
-// FormatDuration formats duration in a pretty way
 func FormatDuration(d time.Duration) string {
 	if d < time.Second {
 		return fmt.Sprintf("%dms", d.Milliseconds())
@@ -138,7 +128,6 @@ type JSONOutput struct {
 	Success bool `json:"success"`
 }
 
-// ToJSON returns the stats as a JSON string
 func (s *Stats) ToJSON() (string, error) {
 	s.Finish()
 
@@ -173,7 +162,6 @@ func (s *Stats) ToJSON() (string, error) {
 	return string(jsonBytes), nil
 }
 
-// PrintSummary prints a pretty deployment summary
 func (s *Stats) PrintSummary() {
 	s.Finish()
 

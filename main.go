@@ -44,7 +44,6 @@ func initLogger(logFile string, verbose bool) *logger.Logger {
 }
 
 func showContainerStats(cfg *config.Config, log *logger.Logger) error {
-	// Minimal validation for stats - just need host, user, and container name
 	if cfg.Host == "" || cfg.User == "" {
 		return fmt.Errorf("host and user are required for --stats")
 	}

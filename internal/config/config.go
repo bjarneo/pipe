@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -113,7 +114,18 @@ func Load() Config {
 	config = mergeConfig(fileConfig, config, flags)
 	config.SSHKey = expandHomePath(config.SSHKey)
 
+	// Add timestamp suffix to default "latest" tag for rollback support
+	config.Tag = generateVersionedTag(config.Tag)
+
 	return config
+}
+
+// generateVersionedTag adds a timestamp suffix to the "latest" tag for rollback support
+func generateVersionedTag(tag string) string {
+	if tag == "latest" {
+		return fmt.Sprintf("latest-%s", time.Now().Format("20060102150405"))
+	}
+	return tag
 }
 
 // initMaps initializes all map fields to prevent nil map assignments
@@ -126,23 +138,19 @@ func initMaps(cfg *Config) {
 
 // defineFlags sets up all command line flags
 func defineFlags(cfg *Config, flags *flagSet) {
-	// Config file
 	flag.StringVar(&flags.configFile, "config", "", "Path to config file (default: pipe.yaml or pipe.yml)")
 
-	// Core options
 	flag.StringVar(&cfg.Host, "host", "", "Remote host to deploy to")
 	flag.StringVar(&cfg.User, "user", "", "SSH user for remote host")
 	flag.StringVar(&cfg.SSHPort, "ssh-port", "", "SSH port (default: 22)")
 	flag.StringVar(&cfg.SSHKey, "ssh-key", "", "Path to SSH key")
 
-	// Image options
 	flag.StringVar(&cfg.Image, "image", "", "Docker image name")
 	flag.StringVar(&cfg.Dockerfile, "dockerfile", "", "Path to the Dockerfile")
 	flag.StringVar(&cfg.Tag, "tag", "", "Docker image tag")
 	flag.StringVar(&cfg.Platform, "platform", "", "Docker platform")
 	flag.Var(&flags.buildArgs, "build-arg", "Build argument in KEY=VALUE format (can be specified multiple times)")
 
-	// Container options
 	flag.StringVar(&cfg.ContainerName, "container-name", "", "Name for the container")
 	flag.StringVar(&cfg.ContainerPort, "container-port", "", "Container port")
 	flag.StringVar(&cfg.HostPort, "host-port", "", "Host port")
@@ -151,18 +159,15 @@ func defineFlags(cfg *Config, flags *flagSet) {
 	flag.Var(&flags.remoteCommandFlags, "remote-command", "Remote command to execute after deployment (can be specified multiple times)")
 	flag.StringVar(&cfg.Network, "network", "", "Docker network to connect to")
 
-	// Resource limits
 	flag.StringVar(&cfg.CPUs, "cpus", "", "Number of CPUs (e.g., '0.5' or '2')")
 	flag.StringVar(&cfg.Memory, "memory", "", "Memory limit (e.g., '512m' or '2g')")
 
-	// Health check flags
 	flag.StringVar(&cfg.HealthCmd, "health-cmd", "", "Health check command")
 	flag.StringVar(&cfg.HealthInterval, "health-interval", "", "Health check interval (e.g., '30s')")
 	flag.StringVar(&cfg.HealthTimeout, "health-timeout", "", "Health check timeout (e.g., '10s')")
 	flag.IntVar(&cfg.HealthRetries, "health-retries", 0, "Health check retries")
 	flag.StringVar(&cfg.HealthStart, "health-start-period", "", "Health check start period (e.g., '5s')")
 
-	// Container runtime flags
 	flag.StringVar(&cfg.RestartPolicy, "restart", "", "Restart policy (no, always, on-failure, unless-stopped)")
 	flag.Var(&flags.labelFlags, "label", "Container label in KEY=VALUE format (can be specified multiple times)")
 	flag.Var(&flags.envFlags, "env", "Environment variable in KEY=VALUE format (can be specified multiple times)")
@@ -173,22 +178,18 @@ func defineFlags(cfg *Config, flags *flagSet) {
 	flag.StringVar(&cfg.Hostname, "hostname", "", "Container hostname")
 	flag.Var(&flags.extraHostFlags, "add-host", "Add host-to-IP mapping (host:ip)")
 
-	// Security flags
 	flag.BoolVar(&cfg.Privileged, "privileged", false, "Run container in privileged mode")
 	flag.BoolVar(&cfg.Init, "init", false, "Run init inside container")
 	flag.BoolVar(&cfg.ReadOnly, "read-only", false, "Mount root filesystem as read-only")
 	flag.Var(&flags.capAddFlags, "cap-add", "Add Linux capability")
 	flag.Var(&flags.capDropFlags, "cap-drop", "Drop Linux capability")
 
-	// Storage flags
 	flag.Var(&flags.tmpfsFlags, "tmpfs", "Mount tmpfs (path or path:opts)")
 
-	// Logging flags
 	flag.StringVar(&cfg.LogDriver, "log-driver", "", "Logging driver (e.g., json-file, syslog, none)")
 	flag.Var(&flags.logOptFlags, "log-opt", "Log driver options in KEY=VALUE format")
 	flag.StringVar(&cfg.LogFile, "log-file", "", "Path to log file (default: deploy.log)")
 
-	// Execution flags
 	flag.BoolVar(&cfg.DryRun, "dry-run", false, "Preview deployment without executing")
 	flag.BoolVar(&cfg.Verbose, "verbose", false, "Show detailed output")
 	flag.BoolVar(&cfg.Verbose, "v", false, "Show detailed output (shorthand)")
@@ -265,8 +266,7 @@ var validPlatforms = map[string]bool{
 	"linux/s390x":   true,
 }
 
-// Validate validates the configuration and returns an error if any field is invalid.
-// This is critical for preventing command injection attacks.
+// Validate validates the configuration
 func (c *Config) Validate() error {
 	var errs []string
 
@@ -378,11 +378,9 @@ func (c *Config) validatePaths() []string {
 	return errs
 }
 
-// validateMaps checks map fields for shell injection
 func (c *Config) validateMaps() []string {
 	var errs []string
 
-	// Validate BuildArgs
 	for key, value := range c.BuildArgs {
 		if !buildArgKeyRegex.MatchString(key) {
 			errs = append(errs, fmt.Sprintf("build-arg key '%s' contains invalid characters", key))
@@ -392,7 +390,6 @@ func (c *Config) validateMaps() []string {
 		}
 	}
 
-	// Validate Env
 	for key, value := range c.Env {
 		if !buildArgKeyRegex.MatchString(key) {
 			errs = append(errs, fmt.Sprintf("env key '%s' contains invalid characters", key))
@@ -402,7 +399,6 @@ func (c *Config) validateMaps() []string {
 		}
 	}
 
-	// Validate Labels
 	for key, value := range c.Labels {
 		if !labelKeyRegex.MatchString(key) {
 			errs = append(errs, fmt.Sprintf("label key '%s' contains invalid characters", key))
@@ -412,7 +408,6 @@ func (c *Config) validateMaps() []string {
 		}
 	}
 
-	// Validate LogOpts
 	for key, value := range c.LogOpts {
 		if !logOptKeyRegex.MatchString(key) {
 			errs = append(errs, fmt.Sprintf("log-opt key '%s' contains invalid characters", key))
@@ -425,11 +420,9 @@ func (c *Config) validateMaps() []string {
 	return errs
 }
 
-// validateSlices checks slice fields for security issues
 func (c *Config) validateSlices() []string {
 	var errs []string
 
-	// Validate Volumes
 	for _, vol := range c.Volumes {
 		if vol == "" {
 			continue
@@ -445,7 +438,6 @@ func (c *Config) validateSlices() []string {
 		}
 	}
 
-	// Validate ExtraHosts (format: hostname:ip)
 	for _, host := range c.ExtraHosts {
 		if host == "" {
 			continue
@@ -463,7 +455,6 @@ func (c *Config) validateSlices() []string {
 		}
 	}
 
-	// Validate CapAdd
 	for _, cap := range c.CapAdd {
 		if cap == "" {
 			continue
@@ -473,7 +464,6 @@ func (c *Config) validateSlices() []string {
 		}
 	}
 
-	// Validate CapDrop
 	for _, cap := range c.CapDrop {
 		if cap == "" {
 			continue
@@ -483,7 +473,6 @@ func (c *Config) validateSlices() []string {
 		}
 	}
 
-	// Validate Tmpfs
 	for _, tmpfs := range c.Tmpfs {
 		if tmpfs == "" {
 			continue
@@ -507,7 +496,6 @@ func (c *Config) validateSlices() []string {
 	return errs
 }
 
-// validateRemoteCommands checks remote commands for dangerous patterns
 func (c *Config) validateRemoteCommands() []string {
 	var errs []string
 	dangerousPatterns := []string{"rm -rf /", "mkfs", "dd if=", "> /dev/"}
@@ -526,32 +514,27 @@ func (c *Config) validateRemoteCommands() []string {
 	return errs
 }
 
-// validateContainerOptions checks container runtime options for security issues
 func (c *Config) validateContainerOptions() []string {
 	var errs []string
 
-	// Validate HealthCmd - executed in shell, check for dangerous characters
 	if c.HealthCmd != "" {
 		if dangerousCharsRegex.MatchString(c.HealthCmd) {
 			errs = append(errs, "health-cmd contains dangerous shell characters")
 		}
 	}
 
-	// Validate Command - passed to container, check for dangerous characters
 	if c.Command != "" {
 		if dangerousCharsRegex.MatchString(c.Command) {
 			errs = append(errs, "command contains dangerous shell characters")
 		}
 	}
 
-	// Validate Entrypoint - passed to container, check for dangerous characters
 	if c.Entrypoint != "" {
 		if dangerousCharsRegex.MatchString(c.Entrypoint) {
 			errs = append(errs, "entrypoint contains dangerous shell characters")
 		}
 	}
 
-	// Validate Workdir - must be absolute path
 	if c.Workdir != "" {
 		if !strings.HasPrefix(c.Workdir, "/") {
 			errs = append(errs, "workdir must be an absolute path")
@@ -564,21 +547,18 @@ func (c *Config) validateContainerOptions() []string {
 		}
 	}
 
-	// Validate Hostname
 	if c.Hostname != "" {
 		if !hostnameRegex.MatchString(c.Hostname) {
 			errs = append(errs, "hostname contains invalid characters")
 		}
 	}
 
-	// Validate ContainerUser (format: user or user:group)
 	if c.ContainerUser != "" {
 		if dangerousCharsRegex.MatchString(c.ContainerUser) {
 			errs = append(errs, "container-user contains dangerous shell characters")
 		}
 	}
 
-	// Validate RestartPolicy
 	validRestartPolicies := map[string]bool{
 		"no":             true,
 		"always":         true,
@@ -589,7 +569,6 @@ func (c *Config) validateContainerOptions() []string {
 		errs = append(errs, "restart policy must be one of: no, always, on-failure, unless-stopped")
 	}
 
-	// Validate LogDriver
 	if c.LogDriver != "" {
 		validLogDrivers := map[string]bool{
 			"json-file": true,
@@ -608,7 +587,6 @@ func (c *Config) validateContainerOptions() []string {
 		}
 	}
 
-	// Validate health check timing formats
 	if c.HealthInterval != "" {
 		if dangerousCharsRegex.MatchString(c.HealthInterval) {
 			errs = append(errs, "health-interval contains dangerous shell characters")
@@ -632,7 +610,6 @@ func (c *Config) validateContainerOptions() []string {
 // Configuration Loading
 // =============================================================================
 
-// loadConfigFile loads configuration from a YAML file
 func loadConfigFile(configPath string) Config {
 	var config Config
 	initMaps(&config)
@@ -657,7 +634,6 @@ func loadConfigFile(configPath string) Config {
 	return config
 }
 
-// findConfigFile returns the config file path, checking defaults if needed
 func findConfigFile(path string) string {
 	if path != "" {
 		return path
@@ -670,7 +646,6 @@ func findConfigFile(path string) string {
 	return ""
 }
 
-// expandEnvVars expands environment variables in all string fields using reflection
 func expandEnvVars(cfg *Config) {
 	expand := func(s string) string {
 		return os.Expand(s, func(key string) string {
@@ -765,13 +740,10 @@ var defaultValues = map[string]string{
 func mergeConfig(fileConfig, cliConfig Config, flags flagSet) Config {
 	result := fileConfig
 
-	// Merge string fields using reflection
 	mergeStringFields(&result, &cliConfig)
 
-	// Merge int fields
 	result.HealthRetries = mergeInt(cliConfig.HealthRetries, "HEALTH_RETRIES", fileConfig.HealthRetries, 0)
 
-	// Merge bool fields
 	result.Privileged = mergeBool(cliConfig.Privileged, "PRIVILEGED", fileConfig.Privileged)
 	result.Init = mergeBool(cliConfig.Init, "INIT", fileConfig.Init)
 	result.ReadOnly = mergeBool(cliConfig.ReadOnly, "READ_ONLY", fileConfig.ReadOnly)
@@ -781,16 +753,13 @@ func mergeConfig(fileConfig, cliConfig Config, flags flagSet) Config {
 	result.Rollback = cliConfig.Rollback
 	result.ShowStats = cliConfig.ShowStats
 
-	// Merge maps
 	mergeMaps(&result, flags)
 
-	// Merge slices
 	mergeSlices(&result, flags)
 
 	return result
 }
 
-// mergeStringFields merges all string fields based on priority
 func mergeStringFields(result, cliConfig *Config) {
 	rv := reflect.ValueOf(result).Elem()
 	cv := reflect.ValueOf(cliConfig).Elem()
@@ -815,7 +784,6 @@ func mergeStringFields(result, cliConfig *Config) {
 	}
 }
 
-// mergeString returns the value with highest priority
 func mergeString(cliVal, envKey, fileVal, defaultVal string) string {
 	if cliVal != "" {
 		return cliVal
@@ -831,7 +799,6 @@ func mergeString(cliVal, envKey, fileVal, defaultVal string) string {
 	return defaultVal
 }
 
-// mergeInt returns the value with highest priority
 func mergeInt(cliVal int, envKey string, fileVal, defaultVal int) int {
 	if cliVal != 0 {
 		return cliVal
@@ -849,7 +816,6 @@ func mergeInt(cliVal int, envKey string, fileVal, defaultVal int) int {
 	return defaultVal
 }
 
-// mergeBool returns the value with highest priority
 func mergeBool(cliVal bool, envKey string, fileVal bool) bool {
 	if cliVal {
 		return true
@@ -862,26 +828,22 @@ func mergeBool(cliVal bool, envKey string, fileVal bool) bool {
 	return fileVal
 }
 
-// mergeMaps merges map fields from various sources
 func mergeMaps(result *Config, flags flagSet) {
 	ensureMap(&result.BuildArgs)
 	ensureMap(&result.Labels)
 	ensureMap(&result.Env)
 	ensureMap(&result.LogOpts)
 
-	// Build args from env
 	if envBuildArgs := os.Getenv("DOCKER_BUILD_ARGS"); envBuildArgs != "" {
 		parseKeyValues(envBuildArgs, ",", result.BuildArgs)
 	}
 
-	// CLI flags override
 	parseArrayFlags(flags.buildArgs, result.BuildArgs)
 	parseArrayFlags(flags.labelFlags, result.Labels)
 	parseArrayFlags(flags.envFlags, result.Env)
 	parseArrayFlags(flags.logOptFlags, result.LogOpts)
 }
 
-// mergeSlices merges slice fields from CLI flags and env
 func mergeSlices(result *Config, flags flagSet) {
 	if len(flags.volumeFlags) > 0 {
 		result.Volumes = []string(flags.volumeFlags)
@@ -909,14 +871,12 @@ func mergeSlices(result *Config, flags flagSet) {
 	}
 }
 
-// ensureMap ensures a map is initialized
 func ensureMap(m *map[string]string) {
 	if *m == nil {
 		*m = make(map[string]string)
 	}
 }
 
-// parseKeyValues parses "key=value,key=value" into a map
 func parseKeyValues(input, sep string, target map[string]string) {
 	for _, item := range strings.Split(input, sep) {
 		parts := strings.SplitN(item, "=", 2)
@@ -926,7 +886,6 @@ func parseKeyValues(input, sep string, target map[string]string) {
 	}
 }
 
-// parseArrayFlags parses array flags into a map
 func parseArrayFlags(flags arrayFlags, target map[string]string) {
 	for _, item := range flags {
 		parts := strings.SplitN(item, "=", 2)

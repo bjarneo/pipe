@@ -12,35 +12,28 @@ import (
 	"github.com/bjarneo/pipe/internal/stats"
 )
 
-// Deploy performs the main deployment process
 func Deploy(cfg *config.Config, log *logger.Logger) error {
 	return DeployWithContext(context.Background(), cfg, log)
 }
 
-// DeployWithContext performs the main deployment process with context support
 func DeployWithContext(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
-	// Enable quiet mode for JSON output
 	if cfg.JSONOutput {
 		log.SetQuiet(true)
 	}
 
-	// Initialize stats tracking
 	st := stats.New()
 	st.SetImageInfo(cfg.Image, cfg.Tag)
 	st.SetContainerInfo(cfg.ContainerName, cfg.Host)
 
-	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
 
-	// Dry run: print configuration summary and exit
 	if cfg.DryRun {
 		log.Step("DRY RUN - no changes will be made")
 		return printDryRunSummary(cfg, log)
 	}
 
-	// Preliminary checks (silent, not counted as a step)
 	if err := docker.Check(ctx, cfg, log); err != nil {
 		return err
 	}
@@ -48,13 +41,11 @@ func DeployWithContext(ctx context.Context, cfg *config.Config, log *logger.Logg
 		return err
 	}
 
-	// Build Docker image
 	if err := docker.Build(ctx, cfg, log); err != nil {
 		return err
 	}
 	log.StepProgress(1, 4, "Building image", "done")
 
-	// Transfer Docker image
 	transferResult, err := docker.Transfer(ctx, cfg, log, st)
 	if err != nil {
 		return err
@@ -62,27 +53,23 @@ func DeployWithContext(ctx context.Context, cfg *config.Config, log *logger.Logg
 	log.StepProgress(2, 4, "Analyzing layers", fmt.Sprintf("%d changed, %d cached", transferResult.NewLayers, transferResult.CachedLayers))
 	log.StepProgress(3, 4, "Transferring delta", fmt.Sprintf("%s (saved %s)", stats.FormatBytes(transferResult.TransferredBytes), stats.FormatBytes(transferResult.ImageSize-transferResult.TransferredBytes)))
 
-	// Copy environment file if it exists (silent step)
 	if cfg.EnvFile != "" {
 		if err := copyEnvFile(ctx, cfg, log); err != nil {
 			return err
 		}
 	}
 
-	// Deploy container
 	if err := docker.Deploy(ctx, cfg, log); err != nil {
 		return err
 	}
 	log.StepProgress(4, 4, "Starting container", "running")
 
-	// Execute remote commands if specified (silent step)
 	if len(cfg.RemoteCommands) > 0 {
 		if err := executeRemoteCommands(ctx, cfg, log); err != nil {
 			return err
 		}
 	}
 
-	// JSON output mode
 	if cfg.JSONOutput {
 		jsonOutput, err := st.ToJSON()
 		if err != nil {
@@ -94,7 +81,6 @@ func DeployWithContext(ctx context.Context, cfg *config.Config, log *logger.Logg
 	return nil
 }
 
-// printDryRunSummary prints what would happen during deployment
 func printDryRunSummary(cfg *config.Config, log *logger.Logger) error {
 	fmt.Println("=== DRY RUN SUMMARY ===")
 	fmt.Printf("Target: %s@%s (port %s)\n", cfg.User, cfg.Host, cfg.SSHPort)
@@ -151,7 +137,6 @@ func printDryRunSummary(cfg *config.Config, log *logger.Logger) error {
 	return nil
 }
 
-// getCurrentContainerImage retrieves the image used by the current container
 func getCurrentContainerImage(ctx context.Context, cfg *config.Config, log *logger.Logger) (string, error) {
 	cmd := fmt.Sprintf("%s \"docker inspect --format='{{.Config.Image}}' %s\"",
 		ssh.GetCommand(cfg), cfg.ContainerName)
@@ -162,7 +147,6 @@ func getCurrentContainerImage(ctx context.Context, cfg *config.Config, log *logg
 	return strings.TrimSpace(result.Stdout), nil
 }
 
-// getImageHistory retrieves the list of images sorted by creation time
 func getImageHistory(ctx context.Context, cfg *config.Config, log *logger.Logger) ([]string, error) {
 	cmd := fmt.Sprintf("%s \"docker images %s --format '{{.Repository}}:{{.Tag}}___{{.CreatedAt}}' | sort -k2 -r\"",
 		ssh.GetCommand(cfg), cfg.Image)
@@ -173,7 +157,6 @@ func getImageHistory(ctx context.Context, cfg *config.Config, log *logger.Logger
 	return strings.Split(strings.TrimSpace(result.Stdout), "\n"), nil
 }
 
-// findPreviousImage finds the previous image version from the history
 func findPreviousImage(images []string, currentImage string) (string, error) {
 	if len(images) < 2 {
 		return "", fmt.Errorf("no previous version found to rollback to")
@@ -195,7 +178,6 @@ func findPreviousImage(images []string, currentImage string) (string, error) {
 	return "", fmt.Errorf("could not find previous version to rollback to")
 }
 
-// verifyContainerRunning checks if a container is running
 func verifyContainerRunning(ctx context.Context, cfg *config.Config, log *logger.Logger) (bool, error) {
 	cmd := fmt.Sprintf("%s \"docker ps --filter name=%s --format '{{.Status}}'\"",
 		ssh.GetCommand(cfg), cfg.ContainerName)
@@ -206,46 +188,38 @@ func verifyContainerRunning(ctx context.Context, cfg *config.Config, log *logger
 	return strings.Contains(result.Stdout, "Up"), nil
 }
 
-// cleanupBackupContainer removes the backup container
 func cleanupBackupContainer(ctx context.Context, cfg *config.Config, log *logger.Logger) {
 	cmd := fmt.Sprintf("%s \"docker rm %s_backup\"", ssh.GetCommand(cfg), cfg.ContainerName)
 	_, _ = ssh.ExecuteCommandContext(ctx, log, cmd, "Cleaning up backup container")
 }
 
-// Rollback performs a rollback to the previous version
 func Rollback(cfg *config.Config, log *logger.Logger) error {
 	return RollbackWithContext(context.Background(), cfg, log)
 }
 
-// RollbackWithContext performs a rollback to the previous version with context support
 func RollbackWithContext(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	log.Step("Starting rollback")
 
-	// Validate configuration
 	if err := cfg.Validate(); err != nil {
 		return err
 	}
 
-	// Check SSH connection
 	log.Step("Checking SSH connectivity")
 	if err := ssh.CheckContext(ctx, cfg, log); err != nil {
 		return err
 	}
 
-	// Get current container image
 	log.Step("Finding previous version")
 	currentImage, err := getCurrentContainerImage(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
 
-	// Get image history
 	images, err := getImageHistory(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
 
-	// Find previous image
 	previousImage, err := findPreviousImage(images, currentImage)
 	if err != nil {
 		return err
@@ -253,19 +227,16 @@ func RollbackWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 
 	log.Step(fmt.Sprintf("Rolling back to %s", previousImage))
 
-	// Perform the rollback
 	if err := performRollback(ctx, cfg, log, previousImage); err != nil {
 		return err
 	}
 
-	// Clean up backup container
 	cleanupBackupContainer(ctx, cfg, log)
 
 	fmt.Println("Rollback completed successfully!")
 	return nil
 }
 
-// copyEnvFile copies the environment file to the remote host
 func copyEnvFile(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	copyEnvCmd := fmt.Sprintf("%s %s %s@%s:~/%s",
 		ssh.GetSCPCommand(cfg), cfg.EnvFile, cfg.User, cfg.Host, cfg.EnvFile)
@@ -273,7 +244,6 @@ func copyEnvFile(ctx context.Context, cfg *config.Config, log *logger.Logger) er
 	return err
 }
 
-// executeRemoteCommands runs custom commands on the remote host after deployment
 func executeRemoteCommands(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	for i, cmd := range cfg.RemoteCommands {
 		if cmd == "" {
@@ -288,44 +258,34 @@ func executeRemoteCommands(ctx context.Context, cfg *config.Config, log *logger.
 	return nil
 }
 
-// buildRollbackCommands creates the command string for rollback operation
 func buildRollbackCommands(cfg *config.Config, previousImage string) string {
-	// Use the full RunBuilder to preserve all container configuration
-	// (volumes, labels, capabilities, health checks, etc.)
 	containerArgs := docker.NewRunBuilder(cfg).BuildWithImage(previousImage)
 
 	commands := []string{
-		// Stop and rename current container (for backup)
 		fmt.Sprintf("docker stop %s", cfg.ContainerName),
 		fmt.Sprintf("docker rename %s %s_backup", cfg.ContainerName, cfg.ContainerName),
-		// Start container with previous version using full configuration
 		fmt.Sprintf("docker run %s", strings.Join(containerArgs, " ")),
 	}
 	return strings.Join(commands, " && ")
 }
 
-// performRollback executes the rollback operation
 func performRollback(ctx context.Context, cfg *config.Config, log *logger.Logger, previousImage string) error {
 	rollbackCommands := buildRollbackCommands(cfg, previousImage)
 
-	// Execute rollback
 	rollbackCmd := fmt.Sprintf("%s \"%s\"", ssh.GetCommand(cfg), rollbackCommands)
 	if _, err := ssh.ExecuteCommandContext(ctx, log, rollbackCmd, "Rolling back to previous version"); err != nil {
-		// If rollback fails, attempt to restore the backup
 		if restoreErr := restoreBackup(ctx, cfg, log); restoreErr != nil {
 			return fmt.Errorf("rollback failed and restore failed: %w (original error: %v)", restoreErr, err)
 		}
 		return fmt.Errorf("rollback failed, restored previous version: %w", err)
 	}
 
-	// Verify new container is running
 	running, err := verifyContainerRunning(ctx, cfg, log)
 	if err != nil {
 		return err
 	}
 
 	if !running {
-		// If verification fails, attempt to restore the backup
 		if restoreErr := restoreBackup(ctx, cfg, log); restoreErr != nil {
 			return fmt.Errorf("rollback verification failed and restore failed: %w", restoreErr)
 		}
@@ -335,7 +295,6 @@ func performRollback(ctx context.Context, cfg *config.Config, log *logger.Logger
 	return nil
 }
 
-// restoreBackup attempts to restore the backup container
 func restoreBackup(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
 	restoreCmd := fmt.Sprintf("%s \"docker stop %s || true && docker rm %s || true && docker rename %s_backup %s && docker start %s\"",
 		ssh.GetCommand(cfg), cfg.ContainerName, cfg.ContainerName,

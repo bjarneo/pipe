@@ -58,7 +58,7 @@ sshKey: ~/.ssh/id_rsa         # Path to SSH private key
 # ═══════════════════════════════════════════════════════════════
 image: my-app                 # Docker image name
 dockerfile: Dockerfile        # Dockerfile path
-tag: latest                   # Image tag (use ${VAR} for dynamic)
+tag: latest                   # Image tag (auto-timestamped when "latest")
 platform: linux/amd64         # Target platform
 
 buildArgs:                    # Build-time variables

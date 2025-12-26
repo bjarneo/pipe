@@ -68,16 +68,13 @@ type StatsJSON struct {
 	RestartCount int `json:"restartCount"`
 }
 
-// GetStats retrieves container statistics from the remote host
 func GetStats(cfg *config.Config, log *logger.Logger) (*Stats, error) {
 	return GetStatsWithContext(context.Background(), cfg, log)
 }
 
-// GetStatsWithContext retrieves container statistics from the remote host with context support
 func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Logger) (*Stats, error) {
 	stats := &Stats{Name: cfg.ContainerName}
 
-	// Get container inspect data - health check is optional so we get it separately
 	inspectCmd := fmt.Sprintf(`%s 'docker inspect --format "{{.Id}}|{{.State.Status}}|{{.Config.Image}}|{{.Created}}|{{.RestartCount}}" %s'`,
 		ssh.GetCommand(cfg), cfg.ContainerName)
 
@@ -103,7 +100,6 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 		}
 	}
 
-	// Get health status separately (may not exist)
 	healthCmd := fmt.Sprintf(`%s 'docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}" %s'`,
 		ssh.GetCommand(cfg), cfg.ContainerName)
 	if healthResult, err := ssh.ExecuteCommandContext(ctx, log, healthCmd, "Getting health status"); err == nil {
@@ -115,13 +111,11 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 		stats.Health = "N/A"
 	}
 
-	// Get port mappings
 	portsCmd := fmt.Sprintf(`%s 'docker port %s'`, ssh.GetCommand(cfg), cfg.ContainerName)
 	if portResult, err := ssh.ExecuteCommandContext(ctx, log, portsCmd, "Getting port mappings"); err == nil {
 		stats.Ports = parsePortMappings(portResult.Stdout)
 	}
 
-	// Get live stats (CPU, Memory, Network, Block I/O)
 	statsCmd := fmt.Sprintf(`%s 'docker stats --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}" %s'`,
 		ssh.GetCommand(cfg), cfg.ContainerName)
 
@@ -140,7 +134,6 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 	return stats, nil
 }
 
-// ToJSON converts stats to JSON string
 func (s *Stats) ToJSON() (string, error) {
 	output := StatsJSON{}
 	output.Container.Name = s.Name
@@ -166,7 +159,6 @@ func (s *Stats) ToJSON() (string, error) {
 	return string(jsonBytes), nil
 }
 
-// PrintStats displays container stats in a nice format
 func (s *Stats) PrintStats() {
 	width := statsDisplayWidth
 	line := strings.Repeat("─", width)
@@ -223,8 +215,6 @@ func (s *Stats) PrintStats() {
 	fmt.Printf("╚%s╝\n", doubleLine)
 	fmt.Println()
 }
-
-// Helper functions
 
 func truncateID(id string) string {
 	if len(id) > containerIDDisplayLen {

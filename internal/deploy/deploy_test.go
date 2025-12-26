@@ -188,6 +188,20 @@ func TestFindPreviousImage(t *testing.T) {
 			expected:     "myapp:v2",
 			expectErr:    false,
 		},
+		{
+			name:         "timestamped latest tags",
+			images:       []string{"myapp:latest-20251226150200___2025-12-26 15:02:00", "myapp:latest-20251226150100___2025-12-26 15:01:00", "myapp:latest-20251226150000___2025-12-26 15:00:00"},
+			currentImage: "myapp:latest-20251226150200",
+			expected:     "myapp:latest-20251226150100",
+			expectErr:    false,
+		},
+		{
+			name:         "rollback from first timestamped tag",
+			images:       []string{"myapp:latest-20251226150000___2025-12-26 15:00:00"},
+			currentImage: "myapp:latest-20251226150000",
+			expected:     "",
+			expectErr:    true,
+		},
 	}
 
 	for _, tt := range tests {

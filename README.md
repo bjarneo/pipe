@@ -104,7 +104,7 @@ pipe --config prod.yaml      # Use different config
 | **Delta transfers** | Only changed layers transfer - 10x faster after first deploy |
 | **Health checks** | Monitor container health with customizable checks |
 | **Resource limits** | Set CPU and memory constraints |
-| **Rollback** | One command to revert to previous version |
+| **Rollback** | One command to revert to previous version (auto-timestamped tags) |
 | **Dry run** | Preview changes before deploying |
 | **Config file** | YAML config with environment variable expansion |
 | **GitHub Action** | Built-in CI/CD integration |
