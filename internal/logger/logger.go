@@ -18,8 +18,11 @@ const (
 type Interface interface {
 	Info(message string) error
 	Step(message string) error
+	StepProgress(stepNum, total int, action, status string) error
 	Debug(message string) error
 	Error(message string, err error) error
+	SetQuiet(quiet bool)
+	IsVerbose() bool
 	Close() error
 }
 

@@ -174,7 +174,10 @@ func shouldUseFullTransfer(remoteLayers map[string]bool, newLayers, totalLayers 
 
 // logLayerStats logs the layer cache statistics
 func logLayerStats(log *logger.Logger, cached, total, new int) {
-	cachePercent := float64(cached) / float64(total) * 100
+	var cachePercent float64
+	if total > 0 {
+		cachePercent = float64(cached) / float64(total) * 100
+	}
 	log.Info(fmt.Sprintf("Layer cache: %d/%d layers cached (%.0f%%), transferring %d changed layers",
 		cached, total, cachePercent, new))
 }

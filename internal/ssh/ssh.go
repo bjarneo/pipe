@@ -144,16 +144,16 @@ func ExecuteCommandContext(ctx context.Context, log *logger.Logger, command, des
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create stdout pipe: %v", err)
+		return nil, fmt.Errorf("failed to create stdout pipe: %w", err)
 	}
 
 	stderr, err := cmd.StderrPipe()
 	if err != nil {
-		return nil, fmt.Errorf("failed to create stderr pipe: %v", err)
+		return nil, fmt.Errorf("failed to create stderr pipe: %w", err)
 	}
 
 	if err := cmd.Start(); err != nil {
-		return nil, fmt.Errorf("failed to start command: %v", err)
+		return nil, fmt.Errorf("failed to start command: %w", err)
 	}
 
 	// Read output streams concurrently
@@ -247,7 +247,7 @@ func handleCommandError(ctx context.Context, err error) error {
 		return fmt.Errorf("command cancelled: %w", ctx.Err())
 	}
 	if exitErr, ok := err.(*exec.ExitError); ok && exitErr.ExitCode() != 0 {
-		return fmt.Errorf("command failed with exit code %d: %v", exitErr.ExitCode(), err)
+		return fmt.Errorf("command failed with exit code %d: %w", exitErr.ExitCode(), err)
 	}
-	return fmt.Errorf("command failed: %v", err)
+	return fmt.Errorf("command failed: %w", err)
 }
