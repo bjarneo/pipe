@@ -61,11 +61,11 @@ func TestLogger_Step(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "STEP:") {
-		t.Errorf("Step() output should contain 'STEP:', got %q", output)
-	}
 	if !strings.Contains(output, "Test step") {
 		t.Errorf("Step() output should contain message, got %q", output)
+	}
+	if !strings.Contains(output, `"type":"step"`) {
+		t.Errorf("Step() output should contain type:step, got %q", output)
 	}
 }
 
@@ -79,9 +79,8 @@ func TestLogger_Step_Quiet(t *testing.T) {
 		t.Errorf("Step() error = %v", err)
 	}
 
-	// Should still write to file/buffer even in quiet mode
 	output := buf.String()
-	if !strings.Contains(output, "STEP:") {
+	if !strings.Contains(output, "Test step") {
 		t.Errorf("Step() should still log to writer in quiet mode, got %q", output)
 	}
 }
@@ -104,13 +103,16 @@ func TestLogger_StepProgress(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "STEP [1/4]") {
-		t.Errorf("StepProgress() output should contain step numbers, got %q", output)
-	}
 	if !strings.Contains(output, "Building") {
 		t.Errorf("StepProgress() output should contain action, got %q", output)
 	}
-	if !strings.Contains(output, "done") {
+	if !strings.Contains(output, `"step":1`) {
+		t.Errorf("StepProgress() output should contain step number, got %q", output)
+	}
+	if !strings.Contains(output, `"total":4`) {
+		t.Errorf("StepProgress() output should contain total, got %q", output)
+	}
+	if !strings.Contains(output, `"status":"done"`) {
 		t.Errorf("StepProgress() output should contain status, got %q", output)
 	}
 }
@@ -125,8 +127,8 @@ func TestLogger_Info(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "INFO:") {
-		t.Errorf("Info() output should contain 'INFO:', got %q", output)
+	if !strings.Contains(output, `"level":"INFO"`) {
+		t.Errorf("Info() output should contain level INFO, got %q", output)
 	}
 	if !strings.Contains(output, "Test info") {
 		t.Errorf("Info() output should contain message, got %q", output)
@@ -143,7 +145,7 @@ func TestLogger_Info_NilLogger(t *testing.T) {
 
 func TestLogger_Debug(t *testing.T) {
 	var buf bytes.Buffer
-	log := NewWithWriter(&buf, false)
+	log := NewWithWriter(&buf, true) // verbose to enable debug
 
 	err := log.Debug("Test debug")
 	if err != nil {
@@ -151,8 +153,8 @@ func TestLogger_Debug(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "DEBUG:") {
-		t.Errorf("Debug() output should contain 'DEBUG:', got %q", output)
+	if !strings.Contains(output, `"level":"DEBUG"`) {
+		t.Errorf("Debug() output should contain level DEBUG, got %q", output)
 	}
 	if !strings.Contains(output, "Test debug") {
 		t.Errorf("Debug() output should contain message, got %q", output)
@@ -177,8 +179,8 @@ func TestLogger_Error(t *testing.T) {
 	}
 
 	output := buf.String()
-	if !strings.Contains(output, "ERROR:") {
-		t.Errorf("Error() output should contain 'ERROR:', got %q", output)
+	if !strings.Contains(output, `"level":"ERROR"`) {
+		t.Errorf("Error() output should contain level ERROR, got %q", output)
 	}
 	if !strings.Contains(output, "Test error") {
 		t.Errorf("Error() output should contain message, got %q", output)
@@ -248,20 +250,22 @@ func TestLogger_Close_NilLogger(t *testing.T) {
 	}
 }
 
-func TestLogger_TimestampFormat(t *testing.T) {
+func TestLogger_JSONFormat(t *testing.T) {
 	var buf bytes.Buffer
 	log := NewWithWriter(&buf, false)
 
 	_ = log.Info("Test")
 
 	output := buf.String()
-	// Check for RFC3339 format (contains T and Z or timezone offset)
-	if !strings.Contains(output, "T") {
-		t.Errorf("Timestamp should be in RFC3339 format, got %q", output)
+	// Check for JSON format with time field
+	if !strings.Contains(output, `"time"`) {
+		t.Errorf("Output should be JSON with time field, got %q", output)
+	}
+	if !strings.Contains(output, `"msg"`) {
+		t.Errorf("Output should be JSON with msg field, got %q", output)
 	}
 }
 
-// testError implements error interface for testing
 type testError struct {
 	msg string
 }
@@ -271,6 +275,5 @@ func (e *testError) Error() string {
 }
 
 func TestLoggerInterface(t *testing.T) {
-	// Verify Logger implements Interface
 	var _ Interface = (*Logger)(nil)
 }

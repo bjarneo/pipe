@@ -1,13 +1,13 @@
 package logger
 
 import (
+	"context"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
-	"time"
 )
 
-// File permission constants
 const (
 	logFilePermissions = 0600
 )
@@ -24,15 +24,14 @@ type Interface interface {
 	Close() error
 }
 
-// Logger handles logging to both console and file
+// Logger handles logging to both console and file using slog
 type Logger struct {
-	writer  io.Writer
-	file    *os.File // Keep reference for Close()
+	slog    *slog.Logger
+	file    *os.File
 	verbose bool
-	quiet   bool // suppress console output (for JSON mode)
+	quiet   bool
 }
 
-// Ensure Logger implements Interface
 var _ Interface = (*Logger)(nil)
 
 func New(filename string, verbose bool) (*Logger, error) {
@@ -40,12 +39,33 @@ func New(filename string, verbose bool) (*Logger, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Logger{writer: file, file: file, verbose: verbose}, nil
+
+	level := slog.LevelInfo
+	if verbose {
+		level = slog.LevelDebug
+	}
+
+	handler := slog.NewJSONHandler(file, &slog.HandlerOptions{Level: level})
+	return &Logger{
+		slog:    slog.New(handler),
+		file:    file,
+		verbose: verbose,
+	}, nil
 }
 
 // NewWithWriter creates a new logger that writes to any io.Writer (useful for testing)
 func NewWithWriter(w io.Writer, verbose bool) *Logger {
-	return &Logger{writer: w, file: nil, verbose: verbose}
+	level := slog.LevelInfo
+	if verbose {
+		level = slog.LevelDebug
+	}
+
+	handler := slog.NewJSONHandler(w, &slog.HandlerOptions{Level: level})
+	return &Logger{
+		slog:    slog.New(handler),
+		file:    nil,
+		verbose: verbose,
+	}
 }
 
 func (l *Logger) SetQuiet(quiet bool) {
@@ -55,87 +75,79 @@ func (l *Logger) SetQuiet(quiet bool) {
 }
 
 func (l *Logger) Step(message string) error {
-	if l == nil || l.writer == nil {
+	if l == nil || l.slog == nil {
 		return nil
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	logMessage := fmt.Sprintf("[%s] STEP: %s\n", timestamp, message)
+	l.slog.LogAttrs(context.Background(), slog.LevelInfo, message,
+		slog.String("type", "step"))
 	if !l.quiet {
 		fmt.Printf("> %s\n", message)
 	}
-	_, err := l.writer.Write([]byte(logMessage))
-	return err
+	return nil
 }
 
 func (l *Logger) StepProgress(stepNum, total int, action, status string) error {
-	if l == nil || l.writer == nil {
+	if l == nil || l.slog == nil {
 		return nil
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	logMessage := fmt.Sprintf("[%s] STEP [%d/%d]: %s... %s\n", timestamp, stepNum, total, action, status)
+	l.slog.LogAttrs(context.Background(), slog.LevelInfo, action,
+		slog.String("type", "progress"),
+		slog.Int("step", stepNum),
+		slog.Int("total", total),
+		slog.String("status", status))
 	if !l.quiet {
 		fmt.Printf("[%d/%d] %s... %s\n", stepNum, total, action, status)
 	}
-	_, err := l.writer.Write([]byte(logMessage))
-	return err
+	return nil
 }
 
 func (l *Logger) Info(message string) error {
-	if l == nil || l.writer == nil {
+	if l == nil || l.slog == nil {
 		return nil
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	logMessage := fmt.Sprintf("[%s] INFO: %s\n", timestamp, message)
+	l.slog.Info(message)
 	if l.verbose && !l.quiet {
 		fmt.Println(message)
 	}
-	_, err := l.writer.Write([]byte(logMessage))
-	return err
+	return nil
 }
 
 func (l *Logger) Debug(message string) error {
-	if l == nil || l.writer == nil {
+	if l == nil || l.slog == nil {
 		return nil
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	logMessage := fmt.Sprintf("[%s] DEBUG: %s\n", timestamp, message)
+	l.slog.Debug(message)
 	if l.verbose && !l.quiet {
 		fmt.Printf("  %s\n", message)
 	}
-	_, err := l.writer.Write([]byte(logMessage))
-	return err
+	return nil
 }
 
 func (l *Logger) Error(message string, err error) error {
-	if l == nil || l.writer == nil {
+	if l == nil || l.slog == nil {
 		return nil
 	}
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	errStr := ""
 	if err != nil {
-		errStr = err.Error()
+		l.slog.Error(message, slog.Any("error", err))
+	} else {
+		l.slog.Error(message)
 	}
-	logMessage := fmt.Sprintf("[%s] ERROR: %s\n%s\n", timestamp, message, errStr)
 	fmt.Printf("ERROR: %s\n", message)
 	if err != nil {
 		fmt.Printf("  Error: %s\n", err)
 	}
-	_, writeErr := l.writer.Write([]byte(logMessage))
-	return writeErr
+	return nil
 }
 
 func (l *Logger) Fatal(err error) {
-	timestamp := time.Now().UTC().Format(time.RFC3339)
-	logMessage := fmt.Sprintf("[%s] FATAL: %s\n", timestamp, err.Error())
-	fmt.Printf("FATAL: %s\n", err)
-	if l != nil && l.writer != nil {
-		_, _ = l.writer.Write([]byte(logMessage))
-		// Sync if we have a file
+	if l != nil && l.slog != nil {
+		l.slog.Error("fatal error", slog.Any("error", err))
 		if l.file != nil {
 			_ = l.file.Sync()
 		}
 		_ = l.Close()
 	}
+	fmt.Printf("FATAL: %s\n", err)
 	os.Exit(1)
 }
 
