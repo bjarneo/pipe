@@ -12,6 +12,15 @@ import (
 	"github.com/bjarneo/pipe/internal/ssh"
 )
 
+// Display and formatting constants
+const (
+	// statsDisplayWidth is the width of the container stats display box
+	statsDisplayWidth = 54
+
+	// containerIDDisplayLen is the length to truncate container IDs to
+	containerIDDisplayLen = 12
+)
+
 // Stats holds container statistics
 type Stats struct {
 	Name         string
@@ -158,7 +167,7 @@ func (s *Stats) ToJSON() (string, error) {
 
 // PrintStats displays container stats in a nice format
 func (s *Stats) PrintStats() {
-	width := 54
+	width := statsDisplayWidth
 	line := strings.Repeat("─", width)
 	doubleLine := strings.Repeat("═", width)
 
@@ -217,8 +226,8 @@ func (s *Stats) PrintStats() {
 // Helper functions
 
 func truncateID(id string) string {
-	if len(id) > 12 {
-		return id[:12]
+	if len(id) > containerIDDisplayLen {
+		return id[:containerIDDisplayLen]
 	}
 	return id
 }

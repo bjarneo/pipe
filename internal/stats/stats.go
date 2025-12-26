@@ -7,6 +7,15 @@ import (
 	"time"
 )
 
+// Display and formatting constants
+const (
+	// summaryDisplayWidth is the width of the deployment summary box
+	summaryDisplayWidth = 50
+
+	// bytesPerKilobyte is the base unit for byte size formatting
+	bytesPerKilobyte = 1024
+)
+
 // Stats tracks deployment statistics
 type Stats struct {
 	StartTime        time.Time
@@ -73,13 +82,12 @@ func (s *Stats) Duration() time.Duration {
 
 // FormatBytes formats bytes into human readable format
 func FormatBytes(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
+	if bytes < bytesPerKilobyte {
 		return fmt.Sprintf("%d B", bytes)
 	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
+	div, exp := int64(bytesPerKilobyte), 0
+	for n := bytes / bytesPerKilobyte; n >= bytesPerKilobyte; n /= bytesPerKilobyte {
+		div *= bytesPerKilobyte
 		exp++
 	}
 	return fmt.Sprintf("%.2f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
@@ -167,7 +175,7 @@ func (s *Stats) ToJSON() (string, error) {
 func (s *Stats) PrintSummary() {
 	s.Finish()
 
-	width := 50
+	width := summaryDisplayWidth
 	line := strings.Repeat("─", width)
 	doubleLine := strings.Repeat("═", width)
 

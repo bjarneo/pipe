@@ -7,6 +7,13 @@ import (
 	"time"
 )
 
+// File permission constants
+const (
+	// logFilePermissions restricts log file access to owner only (read/write)
+	// to prevent other users from reading potentially sensitive deployment logs
+	logFilePermissions = 0600
+)
+
 // Interface defines the logging interface for dependency injection and testing
 type Interface interface {
 	Info(message string) error
@@ -29,8 +36,7 @@ var _ Interface = (*Logger)(nil)
 
 // New creates a new logger instance that writes to a file
 func New(filename string, verbose bool) (*Logger, error) {
-	// Use 0600 permissions to prevent other users from reading potentially sensitive logs
-	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0600)
+	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, logFilePermissions)
 	if err != nil {
 		return nil, err
 	}

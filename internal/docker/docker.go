@@ -28,8 +28,23 @@ type TransferResult struct {
 	ImageSize        int64
 }
 
-// compressionRatio is the estimated gzip compression ratio for Docker images
-const compressionRatio = 0.4
+// Constants for docker operations
+const (
+	// compressionRatio is the estimated gzip compression ratio for Docker images
+	compressionRatio = 0.4
+
+	// maxReleasesToKeep is the number of old image releases to retain on the remote host
+	maxReleasesToKeep = 5
+
+	// layerHashPrefixLen is the length of the layer hash prefix used for delta transfers
+	layerHashPrefixLen = 12
+
+	// Size unit multipliers for parsing transfer sizes
+	kilobyte = 1024
+	megabyte = kilobyte * 1024
+	gigabyte = megabyte * 1024
+	terabyte = gigabyte * 1024
+)
 
 // =============================================================================
 // Pre-flight Checks
@@ -302,8 +317,8 @@ func getCachedLayerPrefixes(localLayers []string, remoteLayers map[string]bool) 
 	for _, layer := range localLayers {
 		if remoteLayers[layer] {
 			hash := strings.TrimPrefix(layer, "sha256:")
-			if len(hash) >= 12 {
-				prefixes = append(prefixes, hash[:12])
+			if len(hash) >= layerHashPrefixLen {
+				prefixes = append(prefixes, hash[:layerHashPrefixLen])
 			}
 		}
 	}
@@ -387,13 +402,13 @@ func parseSizeString(s string) int64 {
 func sizeMultiplier(unit string) int64 {
 	switch strings.ToUpper(strings.TrimSpace(unit)) {
 	case "K", "KB", "KIB":
-		return 1024
+		return kilobyte
 	case "M", "MB", "MIB":
-		return 1024 * 1024
+		return megabyte
 	case "G", "GB", "GIB":
-		return 1024 * 1024 * 1024
+		return gigabyte
 	case "T", "TB", "TIB":
-		return 1024 * 1024 * 1024 * 1024
+		return terabyte
 	default:
 		return 1
 	}
@@ -436,12 +451,12 @@ func cleanupOldReleases(ctx context.Context, cfg *config.Config, log *logger.Log
 	}
 
 	tags := strings.Split(strings.TrimSpace(result.Stdout), "\n")
-	if len(tags) <= 5 {
+	if len(tags) <= maxReleasesToKeep {
 		return nil
 	}
 
 	slices.Reverse(tags)
-	for _, tag := range tags[5:] {
+	for _, tag := range tags[maxReleasesToKeep:] {
 		if tag == "" {
 			continue
 		}

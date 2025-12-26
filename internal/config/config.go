@@ -246,6 +246,12 @@ var (
 	dangerousCharsRegex = regexp.MustCompile(`[;&|$` + "`" + `\\\n\r"'<>(){}]`)
 )
 
+// Port range constants
+const (
+	minPort = 1
+	maxPort = 65535
+)
+
 // Valid platforms whitelist
 var validPlatforms = map[string]bool{
 	"linux/amd64":   true,
@@ -332,8 +338,8 @@ func validatePort(port, name string) []string {
 	if port == "" {
 		return nil
 	}
-	if p, err := strconv.Atoi(port); err != nil || p < 1 || p > 65535 {
-		return []string{fmt.Sprintf("%s must be a valid port number (1-65535)", name)}
+	if p, err := strconv.Atoi(port); err != nil || p < minPort || p > maxPort {
+		return []string{fmt.Sprintf("%s must be a valid port number (%d-%d)", name, minPort, maxPort)}
 	}
 	return nil
 }
