@@ -82,7 +82,7 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 	stats := &Stats{Name: cfg.ContainerName}
 
 	inspectCmd := fmt.Sprintf(`%s 'docker inspect --format "{{.Id}}|{{.State.Status}}|{{.Config.Image}}|{{.Created}}|{{.RestartCount}}" %s'`,
-		ssh.GetCommand(cfg), cfg.ContainerName)
+		ssh.BuildSSHCommand(cfg), cfg.ContainerName)
 
 	result, err := ssh.ExecuteCommandContext(ctx, log, inspectCmd, "Getting container info")
 	if err != nil {
@@ -107,7 +107,7 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 	}
 
 	healthCmd := fmt.Sprintf(`%s 'docker inspect --format "{{if .State.Health}}{{.State.Health.Status}}{{else}}N/A{{end}}" %s'`,
-		ssh.GetCommand(cfg), cfg.ContainerName)
+		ssh.BuildSSHCommand(cfg), cfg.ContainerName)
 	if healthResult, err := ssh.ExecuteCommandContext(ctx, log, healthCmd, "Getting health status"); err == nil {
 		stats.Health = strings.TrimSpace(healthResult.Stdout)
 		if stats.Health == "" {
@@ -117,13 +117,13 @@ func GetStatsWithContext(ctx context.Context, cfg *config.Config, log *logger.Lo
 		stats.Health = healthStatusNA
 	}
 
-	portsCmd := fmt.Sprintf(`%s 'docker port %s'`, ssh.GetCommand(cfg), cfg.ContainerName)
+	portsCmd := fmt.Sprintf(`%s 'docker port %s'`, ssh.BuildSSHCommand(cfg), cfg.ContainerName)
 	if portResult, err := ssh.ExecuteCommandContext(ctx, log, portsCmd, "Getting port mappings"); err == nil {
 		stats.Ports = parsePortMappings(portResult.Stdout)
 	}
 
 	statsCmd := fmt.Sprintf(`%s 'docker stats --no-stream --format "{{.CPUPerc}}|{{.MemUsage}}|{{.MemPerc}}|{{.NetIO}}|{{.BlockIO}}|{{.PIDs}}" %s'`,
-		ssh.GetCommand(cfg), cfg.ContainerName)
+		ssh.BuildSSHCommand(cfg), cfg.ContainerName)
 
 	if statsResult, err := ssh.ExecuteCommandContext(ctx, log, statsCmd, "Getting container stats"); err == nil {
 		statsParts := strings.Split(strings.TrimSpace(statsResult.Stdout), "|")

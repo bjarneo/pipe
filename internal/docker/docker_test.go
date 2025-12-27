@@ -7,7 +7,7 @@ import (
 	"github.com/bjarneo/pipe/internal/config"
 )
 
-func TestImageRef(t *testing.T) {
+func TestBuildImageRef(t *testing.T) {
 	tests := []struct {
 		name     string
 		image    string
@@ -22,9 +22,9 @@ func TestImageRef(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := &config.Config{Image: tt.image, Tag: tt.tag}
-			result := imageRef(cfg)
+			result := buildImageRef(cfg)
 			if result != tt.expected {
-				t.Errorf("imageRef() = %q, want %q", result, tt.expected)
+				t.Errorf("buildImageRef() = %q, want %q", result, tt.expected)
 			}
 		})
 	}

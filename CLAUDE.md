@@ -108,8 +108,8 @@ See `docs/lint.md` for full details.
 
 ## Common Patterns
 
-- Use `ssh.GetCommand(cfg)` for SSH commands
-- Use `ssh.GetSCPCommand(cfg)` for SCP commands
+- Use `ssh.BuildSSHCommand(cfg)` for SSH commands
+- Use `ssh.BuildSCPCommand(cfg)` for SCP commands
 - Use `ssh.ExecuteCommand(log, cmd, description)` for running commands
 - Maps like `BuildArgs`, `Env`, `Labels` are KEY=VALUE pairs
 - Array flags (volumes, caps, etc.) can be specified multiple times

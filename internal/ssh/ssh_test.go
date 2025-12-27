@@ -6,7 +6,7 @@ import (
 	"github.com/bjarneo/pipe/internal/config"
 )
 
-func TestGetCommand(t *testing.T) {
+func TestBuildSSHCommand(t *testing.T) {
 	tests := []struct {
 		name     string
 		config   *config.Config
@@ -61,15 +61,15 @@ func TestGetCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetCommand(tt.config)
+			result := BuildSSHCommand(tt.config)
 			if result != tt.expected {
-				t.Errorf("GetCommand() = %q, want %q", result, tt.expected)
+				t.Errorf("BuildSSHCommand() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestGetSCPCommand(t *testing.T) {
+func TestBuildSCPCommand(t *testing.T) {
 	tests := []struct {
 		name     string
 		config   *config.Config
@@ -115,15 +115,15 @@ func TestGetSCPCommand(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := GetSCPCommand(tt.config)
+			result := BuildSCPCommand(tt.config)
 			if result != tt.expected {
-				t.Errorf("GetSCPCommand() = %q, want %q", result, tt.expected)
+				t.Errorf("BuildSCPCommand() = %q, want %q", result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestKeyFlag(t *testing.T) {
+func TestBuildKeyFlagInternal(t *testing.T) {
 	tests := []struct {
 		name     string
 		key      string
@@ -136,15 +136,15 @@ func TestKeyFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := keyFlag(tt.key)
+			result := buildKeyFlag(tt.key)
 			if result != tt.expected {
-				t.Errorf("keyFlag(%q) = %q, want %q", tt.key, result, tt.expected)
+				t.Errorf("buildKeyFlag(%q) = %q, want %q", tt.key, result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestPortFlag(t *testing.T) {
+func TestBuildPortFlagInternal(t *testing.T) {
 	tests := []struct {
 		name     string
 		port     string
@@ -159,40 +159,40 @@ func TestPortFlag(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := portFlag(tt.port, tt.flag)
+			result := buildPortFlag(tt.port, tt.flag)
 			if result != tt.expected {
-				t.Errorf("portFlag(%q, %q) = %q, want %q", tt.port, tt.flag, result, tt.expected)
+				t.Errorf("buildPortFlag(%q, %q) = %q, want %q", tt.port, tt.flag, result, tt.expected)
 			}
 		})
 	}
 }
 
-func TestGetKeyFlag(t *testing.T) {
+func TestBuildKeyFlag(t *testing.T) {
 	cfg := &config.Config{SSHKey: "/path/to/key"}
 	expected := "-i /path/to/key"
-	result := GetKeyFlag(cfg)
+	result := BuildKeyFlag(cfg)
 	if result != expected {
-		t.Errorf("GetKeyFlag() = %q, want %q", result, expected)
+		t.Errorf("BuildKeyFlag() = %q, want %q", result, expected)
 	}
 
 	cfg = &config.Config{}
-	result = GetKeyFlag(cfg)
+	result = BuildKeyFlag(cfg)
 	if result != "" {
-		t.Errorf("GetKeyFlag() with empty key = %q, want empty string", result)
+		t.Errorf("BuildKeyFlag() with empty key = %q, want empty string", result)
 	}
 }
 
-func TestGetPortFlag(t *testing.T) {
+func TestBuildPortFlag(t *testing.T) {
 	cfg := &config.Config{SSHPort: "2222"}
 	expected := "-p 2222"
-	result := GetPortFlag(cfg)
+	result := BuildPortFlag(cfg)
 	if result != expected {
-		t.Errorf("GetPortFlag() = %q, want %q", result, expected)
+		t.Errorf("BuildPortFlag() = %q, want %q", result, expected)
 	}
 
 	cfg = &config.Config{SSHPort: "22"}
-	result = GetPortFlag(cfg)
+	result = BuildPortFlag(cfg)
 	if result != "" {
-		t.Errorf("GetPortFlag() with default port = %q, want empty string", result)
+		t.Errorf("BuildPortFlag() with default port = %q, want empty string", result)
 	}
 }

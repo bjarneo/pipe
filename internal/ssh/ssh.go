@@ -46,14 +46,14 @@ func (e *DefaultExecutor) ExecuteContext(ctx context.Context, command, descripti
 // SSH Command Building
 // =============================================================================
 
-func GetCommand(cfg *config.Config) string {
+func BuildSSHCommand(cfg *config.Config) string {
 	var parts []string
 	parts = append(parts, "ssh")
 
-	if flag := keyFlag(cfg.SSHKey); flag != "" {
+	if flag := buildKeyFlag(cfg.SSHKey); flag != "" {
 		parts = append(parts, flag)
 	}
-	if flag := portFlag(cfg.SSHPort, "-p"); flag != "" {
+	if flag := buildPortFlag(cfg.SSHPort, "-p"); flag != "" {
 		parts = append(parts, flag)
 	}
 
@@ -61,40 +61,40 @@ func GetCommand(cfg *config.Config) string {
 	return strings.Join(parts, " ")
 }
 
-func GetSCPCommand(cfg *config.Config) string {
+func BuildSCPCommand(cfg *config.Config) string {
 	var parts []string
 	parts = append(parts, "scp")
 
-	if flag := keyFlag(cfg.SSHKey); flag != "" {
+	if flag := buildKeyFlag(cfg.SSHKey); flag != "" {
 		parts = append(parts, flag)
 	}
-	if flag := portFlag(cfg.SSHPort, "-P"); flag != "" {
+	if flag := buildPortFlag(cfg.SSHPort, "-P"); flag != "" {
 		parts = append(parts, flag)
 	}
 
 	return strings.Join(parts, " ")
 }
 
-func keyFlag(key string) string {
+func buildKeyFlag(key string) string {
 	if key != "" {
 		return fmt.Sprintf("-i %s", key)
 	}
 	return ""
 }
 
-func portFlag(port, flag string) string {
+func buildPortFlag(port, flag string) string {
 	if port != "" && port != "22" {
 		return fmt.Sprintf("%s %s", flag, port)
 	}
 	return ""
 }
 
-func GetKeyFlag(cfg *config.Config) string {
-	return keyFlag(cfg.SSHKey)
+func BuildKeyFlag(cfg *config.Config) string {
+	return buildKeyFlag(cfg.SSHKey)
 }
 
-func GetPortFlag(cfg *config.Config) string {
-	return portFlag(cfg.SSHPort, "-p")
+func BuildPortFlag(cfg *config.Config) string {
+	return buildPortFlag(cfg.SSHPort, "-p")
 }
 
 // =============================================================================
@@ -106,7 +106,7 @@ func Check(cfg *config.Config, log *logger.Logger) error {
 }
 
 func CheckContext(ctx context.Context, cfg *config.Config, log *logger.Logger) error {
-	command := fmt.Sprintf("%s echo \"SSH connection successful\"", GetCommand(cfg))
+	command := fmt.Sprintf("%s echo \"SSH connection successful\"", BuildSSHCommand(cfg))
 	_, err := ExecuteCommandContext(ctx, log, command, "Checking SSH connection")
 	return err
 }
