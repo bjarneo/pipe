@@ -17,6 +17,20 @@ Pipe builds your Docker image locally, transfers only the changed layers to your
 - **Security by Default** - Uses your existing SSH keys and encrypted tunnels, no registry credentials to manage
 - **Air-Gapped Networks** - Works when the target server has no internet access but you have SSH access via a jump box
 
+### When to Use What
+
+**Use Pipe when:**
+- Deploying to a single remote VPS for smaller projects
+- The environment is locked down and cannot reach an external registry
+- You want to avoid the "Registry Dance" (tagging, logging in, pushing, pulling) for a minor tweak
+- You want to keep it simple, like a Capistrano deployment
+
+**Use a Registry when:**
+- Working in a team or production environment
+- You have more than one target server
+- You want CI/CD pipelines to handle deployments automatically
+- Your image is large and you want layer caching across multiple servers
+
 ## Why Pipe?
 
 - **No registry needed** - Deploy directly from your machine to any server

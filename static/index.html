@@ -170,6 +170,27 @@
             <p>Environment variables, JSON output for automation, and dry-run mode for testing pipelines.</p>
           </div>
         </div>
+
+        <div class="when-to-use">
+          <div class="when-card">
+            <h3>Use Pipe when:</h3>
+            <ul>
+              <li>Deploying to a single remote VPS for smaller projects</li>
+              <li>The environment is locked down and cannot reach an external registry</li>
+              <li>You want to avoid the "Registry Dance" (tagging, logging in, pushing, pulling) for a minor tweak</li>
+              <li>You want to keep it simple, like a Capistrano deployment</li>
+            </ul>
+          </div>
+          <div class="when-card">
+            <h3>Use a Registry when:</h3>
+            <ul>
+              <li>Working in a team or production environment</li>
+              <li>You have more than one target server</li>
+              <li>You want CI/CD pipelines to handle deployments automatically</li>
+              <li>Your image is large and you want layer caching across multiple servers</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </section>
 
