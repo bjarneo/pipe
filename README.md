@@ -10,6 +10,13 @@
 
 Pipe builds your Docker image locally, transfers only the changed layers to your server, and starts your container. It's like `git push` for containers.
 
+## Why Not Use a Registry?
+
+- **No Infrastructure Required** - No need to set up, authenticate, or pay for a registry (Docker Hub, ECR, Harbor, etc.)
+- **Direct Path** - Data travels directly from your machine to the target server, no upload-then-download round trip
+- **Security by Default** - Uses your existing SSH keys and encrypted tunnels, no registry credentials to manage
+- **Air-Gapped Networks** - Works when the target server has no internet access but you have SSH access via a jump box
+
 ## Why Pipe?
 
 - **No registry needed** - Deploy directly from your machine to any server
